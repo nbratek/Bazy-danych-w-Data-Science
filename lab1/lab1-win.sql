@@ -29,13 +29,15 @@ from products p
 where productid < 10
 
 
-select p.productid, p.ProductName, p.unitprice, 
-       avg(p.unitprice) over () as avgprice
+select p.productid, p.ProductName, p.unitprice,
+       avg(unitprice) over () as avgprice
 from products p
 where productid < 10;
 
-select p.productid, p.ProductName, p.unitprice, 
-       (select avg(unitprice) from products) as avgprice
+select p.productid, p.ProductName, p.unitprice,
+       (select avg(unitprice)
+        from products pr
+        where pr.productid < 10) as avgprice
 from products p
 where productid < 10;
 

@@ -146,23 +146,26 @@ Jaka jest różnica? Czego dotyczy warunek w każdym z przypadków? Napisz polec
 
 Różnica: w pierwszym zapytaniu jest średnia wszystkich produktów, a w drugim zapytaniu średnia cena produktów o productid < 10
 
-- funkcja okna 
 
-```sql
-select p.productid, p.ProductName, p.unitprice, 
-       avg(p.unitprice) over () as avgprice
-from products p
-where productid < 10;
-```
 - podzapytanie
 
 ```sql
-select p.productid, p.ProductName, p.unitprice, 
-       (select avg(unitprice) from products) as avgprice
+select p.productid, p.ProductName, p.unitprice,
+       (select avg(unitprice)
+        from products pr
+        where pr.productid < 10) as avgprice
 from products p
 where productid < 10;
 ```
-W funkcji okna średnia liczona jest tylko dla przefiltrowanych danych, w podzapytaniu średnia jest liczona dla całej tabeli.
+- funkcja okna 
+
+```sql
+select p.productid, p.ProductName, p.unitprice,
+       avg(unitprice) over () as avgprice
+from products p
+where productid < 10;
+```
+
 
 ---
 
@@ -538,16 +541,38 @@ where unitprice > avg_price_in_category
 order by id;
 ```
 
-![zad5](screen/6-1-subquery.png)
 
-![zad5](screen/6join.png)
+```sql
+select 
+    p.id,
+    p.productid,
+    p.productname,
+    p.categoryid,
+    p.unitprice,
+    (
+        select avg(pp.unitprice)
+        from product_history pp
+        where pp.categoryid = p.categoryid
+    ) as avg_price_in_category
+from product_history p
+where p.id < 100000
+  and p.unitprice > (
+        select avg(pp.unitprice)
+        from product_history pp
+        where pp.categoryid = p.categoryid
+    )
+order by p.id;
+```
 
-![zad5](screen/6window.png)
+![zad5](6.1.2.png)
+
+![zad5](6.2.2.png)
+
+![zad5](6.3.2.png)
 
 Ze względu na długi czas wykonania zapytań ograniczyliśmy liczbę wierszy.
 
-Podzapytanie i funkcja okna dawały podobne wyniki czasowe. 
-Największa różnica była widoczna w przypadku zapytania z join. W PostgreSQL czas wykonania był znacznie dłuższy, ponieważ wykorzystywany był Hash Join oraz agregacja na dużym zbiorze danych. W SQL Server to samo zapytanie wykonywało się szybciej. Wynika to z zastosowania innych mechanizmów.
+Zapytanie z funkcją okna jest najbardziej rozbudowane, ale operacje są wykonywane jednorazowo na całym zbiorze danych. Zapytanie z joinem ma mniej operacji, jednak wymaga łączenia danych i agregacji. W zapytaniu z podzapytaniem są operacje o większym koszcie, takie jak Clustered Index Scan i agregacja, co może powodować wolniejsze działanie.
 
 
 ---
