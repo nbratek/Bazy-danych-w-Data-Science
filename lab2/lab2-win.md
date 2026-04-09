@@ -381,7 +381,7 @@ from products
 order by categoryid, unitprice desc;
 ```
 
-
+<div style="page-break-after: always;"></div>
 
 ### Wyniki: 
 ![alt text](screen/zdjecie1.png)
@@ -411,6 +411,8 @@ order by categoryid, unitprice desc;
 ### Wynik zapytania z poprawionym last_value:
 
 ![alt text](screen/zdjecie2.png)
+
+<div style="page-break-after: always;"></div>
 
 # Zadanie 6
 
@@ -488,11 +490,16 @@ from order_values;
 ```
 ![alt text](screen/zdjecie3.png)
 ![alt text](screen/zdjecie4.png)
+
+<div style="page-break-after: always;"></div>
+
 ### Plan zapytania dla SQLite:
 ![alt text](screen/zdjecie7.png)
 ---
 
 Uzycie first value umożliwia wykonanie zadania bez użycia dodatkowych joinów, podzapytań czy agregacji.
+
+<div style="page-break-after: always;"></div>
 
 # Zadanie 7
 
@@ -574,10 +581,14 @@ Rezultat wywołania powyższego zapytania:
 -SQLite:
 ![alt text](screen/zdjecie9.png)
 
+<div style="page-break-after: always;"></div>
+
 ### Plany dla zapytań bez funkcji okna:
 -SQLite:
 ![alt text](screen/zdjecie8.png)
 
+
+<div style="page-break-after: always;"></div>
 
 # Zadanie 8
 
