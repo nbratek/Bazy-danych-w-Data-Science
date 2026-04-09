@@ -369,7 +369,7 @@ Co jest przyczyną takiego działania funkcji `last_value`.
 
 Co trzeba zmienić żeby funkcja last_value pokazywała najtańszy produkt w danej kategorii?
 
-Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres lub SQLite)
+Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres lub SQLite
 
 ```sql
 select productid, productname, unitprice, categoryid,  
@@ -382,15 +382,35 @@ order by categoryid, unitprice desc;
 ```
 
 
----
-> Wyniki: 
 
+### Wyniki: 
+![alt text](screen/zdjecie1.png)
+
+
+`first_value` bierze wartość z pierwszego wiersza w danym oknie, czyli zwraca najdroższy produkt w danej kategorii.  
+ `last_value` bierze wartość z ostatniego wiersza w danym oknie.  
+ W przypadku funkcji `last_value` - okno jest definiowane jako "od początku do aktualnego wiersza"
+ Dlatego funkcja `last_value` nie pokazuje najtańszego produktu, tylko pokazuje produkt z aktualnego wiersza, czyli najtańszy produkt w danej chwili, bez uwzględnienia wierszy, które są po nim.
+
+Aby funkcja `last_value` pokazywała najtańszy produkt w danej kategorii, trzeba rozszerzyć okno, tak aby obejmowało wszystkie wiersze w danej kategorii. Można to zrobić za pomocą klauzuli `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
+### Poprawione zapytanie:
 ```sql
---  ...
+select productid, productname, unitprice, categoryid,
+    first_value(productname) over (
+        partition by categoryid
+        order by unitprice desc
+    ) as first,
+    last_value(productname) over (
+        partition by categoryid
+        order by unitprice desc
+        rows between unbounded preceding and unbounded following
+    ) as last
+from products
+order by categoryid, unitprice desc;
 ```
+### Wynik zapytania z poprawionym last_value:
 
----
-
+![alt text](screen/zdjecie2.png)
 
 # Zadanie 6
 
@@ -412,17 +432,67 @@ Zbiór wynikowy powinien zawierać:
 	- datę tego zamówienia
 	- wartość tego zamówienia
 
-Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres lub SQLite)
+Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres lub SQLite
 
----
-> Wyniki: 
+### Wyniki: 
 
 ```sql
---  ...
-```
+with order_values as (
+    select
+        o.customerid,
+        o.orderid,
+        o.orderdate,
+        sum(od.unitprice * od.quantity * (1 - od.discount)) + o.freight as order_value,
+        strftime('%Y-%m', o.orderdate) as year_month
+    from orders o
+    join "Order Details" od on o.orderid = od.orderid
+    group by o.customerid, o.orderid, o.orderdate, o.freight
+)
 
+select
+    *,
+
+    -- MIN
+    first_value(orderid) over (
+        partition by year_month
+        order by order_value asc
+    ) as min_order_id,
+
+    first_value(orderdate) over (
+        partition by year_month
+        order by order_value asc
+    ) as min_order_date,
+
+    first_value(order_value) over (
+        partition by year_month
+        order by order_value asc
+    ) as min_order_value,
+
+    -- MAX
+    first_value(orderid) over (
+        partition by year_month
+        order by order_value desc
+    ) as max_order_id,
+
+    first_value(orderdate) over (
+        partition by year_month
+        order by order_value desc
+    ) as max_order_date,
+
+    first_value(order_value) over (
+        partition by year_month
+        order by order_value desc
+    ) as max_order_value
+
+from order_values;
+```
+![alt text](screen/zdjecie3.png)
+![alt text](screen/zdjecie4.png)
+### Plan zapytania dla SQLite:
+![alt text](screen/zdjecie7.png)
 ---
 
+Uzycie first value umożliwia wykonanie zadania bez użycia dodatkowych joinów, podzapytań czy agregacji.
 
 # Zadanie 7
 
@@ -441,14 +511,72 @@ Spróbuj uzyskać ten sam wynik bez użycia funkcji okna, porównaj wyniki, czas
 
 Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
----
-> Wyniki: 
+### Wyniki: 
+
+Kod SQL z funkcją okna dla SQLite:
 
 ```sql
---  ...
-```
+with base as (
+    select 
+        id,
+        productid,
+        date,
+        value * quantity as sales_value
+    from product_history
+)
 
----
+select 
+    *,
+    sum(sales_value) over (
+        partition by productid, strftime('%Y-%m', date)
+        order by date
+    ) as cumulative_sales
+from base;
+```
+Rezultat wywołania powyższego zapytania:
+
+![alt text](screen/zdjecie5.png)
+
+Kod SQL bez funkcji okna dla SQLite:
+
+```sql
+select
+    p1.id,
+    p1.productid,
+    p1.date,
+    p1.value * p1.quantity as sales_value,
+
+    (
+        select sum(p2.value * p2.quantity)
+        from product_history p2
+        where p2.productid = p1.productid
+          and strftime('%Y-%m', p2.date) = strftime('%Y-%m', p1.date)
+          and p2.date <= p1.date
+    ) as cumulative_sales
+
+from product_history p1;
+```
+Rezultat wywołania powyższego zapytania:
+![alt text](screen/zdjecie6.png)
+
+### Czasy zapytań z funkcją okna:
+- MS SQL Server: 10 s
+- SQLite: 2,4 s
+- PostgreSQL: 1,5 s
+
+### Czasy zapytań bez funkcji okna:
+- MS SQL Server: 34 s
+- SQLite: 1 min 47 s
+- PostgreSQL: 30 s
+
+
+### Plany dla zapytań z funkcją okna:
+-SQLite:
+![alt text](screen/zdjecie9.png)
+
+### Plany dla zapytań bez funkcji okna:
+-SQLite:
+![alt text](screen/zdjecie8.png)
 
 
 # Zadanie 8
@@ -457,16 +585,70 @@ Wykonaj kilka "własnych" przykładowych analiz.
 
 Czy są jeszcze jakieś ciekawe/przydatne funkcje okna (z których nie korzystałeś w ćwiczeniu)? Spróbuj ich użyć w zaprezentowanych przykładach.
 
-Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres lub SQLite)
+Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres lub SQLite
 
----
-> Wyniki: 
+### Średnia ruchoma (moving average) dla wartości sprzedaży produktu w danym dniu, z oknem 3 dniowym:
 
 ```sql
---  ...
+select 
+    productid,
+    date,
+    value * quantity as sales_value,
+
+    avg(value * quantity) over (
+        partition by productid
+        order by date
+        rows between 2 preceding and current row
+    ) as moving_avg
+
+from product_history;
 ```
 
----
+### Rezultat wywołania powyższego zapytania:
+![alt text](screen/zdjecie10.png)
+
+### Użycie funkcji percet_rank(), procentowa pozycja produktu w kategorii względem ceny
+
+```sql
+select 
+    productid,
+    productname,
+    categoryid,
+    unitprice,
+
+    percent_rank() over (
+        partition by categoryid
+        order by unitprice
+    ) as price_percent_rank
+
+from products;
+```
+
+### Rezultat wywołania powyższego zapytania:
+![alt text](screen/zdjecie11.png)
+
+
+### Ranking klientów na podstawie łącznej wartości zamówień, z podziałem na kwartyle z wykorzystaniem funkcji ntile():
+
+```sql
+WITH CustomerSpending AS (
+    SELECT 
+        o.CustomerID, 
+        SUM(od.UnitPrice * od.Quantity) as TotalSpent
+    FROM Orders o
+    JOIN [Order Details] od ON o.OrderID = od.OrderID
+    GROUP BY o.CustomerID
+)
+SELECT 
+    CustomerID, 
+    TotalSpent,
+    NTILE(4) OVER(ORDER BY TotalSpent DESC) as SpendingQuartile
+FROM CustomerSpending;
+```
+
+### Rezultat wywołania powyższego zapytania:
+![alt text](screen/zdjecie12.png)
+
 Punktacja
 
 |         |     |
