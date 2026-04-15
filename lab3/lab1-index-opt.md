@@ -282,8 +282,8 @@ Sprawdź zakładkę **Tuning Options**, co tam można skonfigurować?
 
 <img src="screen/zad2-tuning-options.png" alt="image" width="500" height="auto">
 
-Można wybrać:
-- Physical Design Structures (PDS)
+Można wybrać Physical Design Structures (PDS), czyli struktury, jakich można do tuningu (m.in Indexes and indexed views
+Indexes, Indexed views, Nonclustered indexes, Filtered indexes, Columnstore indexes). Można również wybrać strategię partycjonowania (No partitioning, Full partitioning, Aligned partitioning) oraz Physical Design Structures to keep, czyli które istniejące struktury zachować (np. Keep all existing PDS, Keep indexes only itp.)
 
 ---
 
@@ -314,6 +314,10 @@ Opisz, dlaczego dane indeksy zostały zaproponowane do zapytań:
 ---
 > Wyniki: 
 
+Po uruchomieniu Start Analysis narzędzie zaproponowało 7 indeksów: 4 dla tabeli salesorderdetail i 3 dla salesorderheader oraz 1 obiekt statystyk. Szacowana poprawa wynosi 61%. 
+
+W zakładce Reports widoczny jest Statement cost report. Największą poprawę uzyskały zapytania 3 i 1 (99.74% i 99.73%), zapytanie 4 poprawiło się o 94.39%, a zapytanie 2 jedynie o 19.10%.
+
 <img src="screen/zad2-recommendations.png" alt="image" width="500" height="auto">
 
 
@@ -325,6 +329,19 @@ Opisz, dlaczego dane indeksy zostały zaproponowane do zapytań:
 <img src="screen/zad2-index-2.png" alt="image" width="500" height="auto">
 
 <img src="screen/zad2-index-3.png" alt="image" width="500" height="auto">
+
+Dla tabeli salesorderdetail zostały zaproponowane indeksy: 
+1. _K1_2_3_4_5_6_7_8_9_10_11 [SalesOrderID] ASC z INCLUDE na pozostałych kolumnach, aby pobrać wszytskie potrzebne dane 
+2. _K5_1_4_8_9 [ProductID] ASC z INCLUDE na SalesOrderID, OrderQty, UnitPriceDiscount, LineTotal, bo wszystkie potrzebne dane będą bezpośrednio w indeksie
+3. _K3_K1 [CarrierTrackingNumber], [SalesOrderID], bo przyspiesza WHERE w zapytaniu 4, SalesOrderID w kluczu eliminuje operator Sort
+4. _K1 [SalesOrderID] – indeks na SalesOrderID, bo przyspiesza JOIN z salesorderheader
+
+Dla tabeli salesorderheader zostały zaproponowane indeksy:
+
+5. _K3_K1_2_4_5_6_7_8_9... [OrderDate], [SalesOrderID] z INCLUDE na wszystkich kolumnach, bo pozwala pobrać wszystkie dane
+6. _K1_4_5_8_9  [SalesOrderID] z INCLUDE na [DueDate], [ShipDate], [SalesOrderNumber], [PurchaseOrderNumber], bo (dla zapytania 3) wszystkie potrzebne dane będą bezpośrednio w indeksie
+7. _K3_K1  [OrderDate], [SalesOrderID], bo przyspiesza WHERE 
+
 ---
 
 
@@ -339,17 +356,27 @@ Sprawdź jak zmieniły się Execution Plany. Opisz zmiany:
 
 <img src="screen/zad2-1-plan.png" alt="image" width="500" height="auto">
 
+Dzięki indeksom 5 i 1 Table Scan na obu tabelach został zastąpiony przez Index Seek na salesorderheader. Nie trzeba już skanować całej tabeli, tylko wyszukiwanie jest po OrderDate, dla znalezionych SalesOrderID wykonywany jest drugi Index Seek na salesorderdetail. Hash Match jest zastąpiony przez Nested Loops, bo liczba wierszy jest mała.
+
+
 - zapytanie 2
 
 <img src="screen/zad2-2-statistics.png" alt="image" width="500" height="auto">
 
 <img src="screen/zad2-2-plan.png" alt="image" width="500" height="auto">
 
+Za pomocą indeksu 2 Table Scan został zastąpiony przez Index Scan, czyli nie skanujemy juz całej tabeli, tylko potrzebne kolumny. Pozostałe operatory (np. Parallelism) pozostały bez zmian, 
+poniewaz nadal są potrzebne dla GROUP BY i HAVING.
+
 - zapytanie 3
 
 <img src="screen/zad2-3-statistics.png" alt="image" width="500" height="auto">
 
 <img src="screen/zad2-3-plan.png" alt="image" width="500" height="auto">
+
+Dzięki indeksom 6 i 7 Table Scan w obu tabelach został zastąpiony przez Index Seek (wyszukiwanie po OrderDate), dla znalezionych SalesOrderID wykonywany jest drugi Index Seek na salesorderdetail. 
+Hash Match został zastąpiony przez Nested Loops.
+
 
 
 - zapytanie 4
@@ -359,6 +386,10 @@ Sprawdź jak zmieniły się Execution Plany. Opisz zmiany:
 
 
 <img src="screen/zad2-4-plan.png" alt="image" width="500" height="auto">
+
+Za pomocą indeksu 3 wykonywany jest Index Seek na salesorderdetail po carriertrackingnumber, dane są od razu posortowane po SalesOrderID. Następnie dla znalezionych SalesOrderID wykonywany jest drugi Index Seek na salesorderheader przy pomocy indeksu 4. Sort pozostaje w planie, ale operuje tylko na 68 wierszach.
+
+
 ---
 
 # Część 2
