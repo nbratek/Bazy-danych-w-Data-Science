@@ -164,7 +164,7 @@ Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
 # Wyniki: 
 
-### Zapytanie z funkcją okna (row_number)
+### Zapytanie z funkcją okna (row_number) dla MS SQL Server
 ```sql
 with ranking as (
     select 
@@ -226,7 +226,6 @@ ORDER BY rok, productid, rn;
 ```
 
 ![1](screen/zad2-result-ssms.png)
-![1](screen/zad2-ssms.png)
 
 ### Plany dla zapytań bez funkcji okna:
 -SQLite:
