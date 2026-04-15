@@ -235,12 +235,29 @@ group by p.productid, p.productname, p.unitprice;
 
 ```
 
-
+### Plany zapytań dla MS SQL Server
 ![zad5](screen/ssms-plan3.1.png)
 
 ![zad5](screen/ssms-plan3.2.png)
 
 ![zad5](screen/ssms-plan3.3.png)
+
+### Plany zapytań dla PostgreSQL
+![alt text](screen/postgres3_subquery.png)
+
+![alt text](screen/postgres3_window.png)
+
+![alt text](screen/postgres3_cross_join.png)
+
+
+### Plany zapytań dla SQLite
+![alt text](screen/sqlite3_subquery.png)
+
+![alt text](screen/sqlite3_window.png)
+
+![alt text](screen/sqlite3_cross_join.png)
+
+
 
 - MS SQL Server:
   - główny koszt we wszystkich zapytaniach to Clustered Index Scan 
