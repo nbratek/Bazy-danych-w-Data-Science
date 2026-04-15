@@ -144,26 +144,44 @@ Jaka jest różnica? Czego dotyczy warunek w każdym z przypadków? Napisz polec
 
 ![2_2](screen/zad2-2.png)
 
-Różnica: w pierwszym zapytaniu jest średnia wszystkich produktów, a w drugim zapytaniu średnia cena produktów o productid < 10
+Różnica: w pierwszym zapytaniu jest średnia wszystkich produktów, ponieważ subquery jest wywoływane niezależnie od klauzuli where i taki sam wynik średniej(dla całości)jest potem doklejany do każdego produktu z id mniejszym od 10.
+W drugim zapytaniu, dzięki użyciu funkcji okna filtr z where jest uwzględniany, przez co liczymy średnią dla produktów o id mniejszym od 10 uwzględniając w oknie tylko produkty o id mniejszym od 10.
 
 
-- podzapytanie
+### Podzapytanie równoważne 2
 
 ```sql
-select p.productid, p.ProductName, p.unitprice,
-       (select avg(unitprice)
-        from products pr
-        where pr.productid < 10) as avgprice
-from products p
-where productid < 10;
+SELECT
+    p.productid,
+    p.ProductName,
+    p.unitprice,
+    (SELECT AVG(unitprice)
+     FROM products
+     WHERE productid < 10) AS avgprice
+FROM products p
+WHERE productid < 10;
 ```
-- funkcja okna 
+
+### funkcja okna równoważna 1
 
 ```sql
-select p.productid, p.ProductName, p.unitprice,
-       avg(unitprice) over () as avgprice
-from products p
-where productid < 10;
+WITH all_products AS (
+    SELECT *
+    FROM products
+),
+calc AS (
+    SELECT
+        *,
+        AVG(unitprice) OVER () AS avgprice
+    FROM all_products
+)
+SELECT
+    productid,
+    ProductName,
+    unitprice,
+    avgprice
+FROM calc
+WHERE productid < 10;
 ```
 
 
