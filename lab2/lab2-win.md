@@ -161,9 +161,10 @@ Spróbuj uzyskać ten sam wynik bez użycia funkcji okna, porównaj wyniki, czas
 Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
 
----
-> Wyniki: 
 
+# Wyniki: 
+
+### Zapytanie z funkcją okna (row_number)
 ```sql
 with ranking as (
     select 
@@ -184,32 +185,62 @@ where rank_pos <= 4
 order by year, productid, rank_pos;
 ```
 
+### Zapytanie bez funkcji okna z ograniczeniem wierszy dla MS SQL Server:
 ```sql
-with ranking as (
-    select 
-        YEAR([date]) as year,
-        p.productid,
-        p.productname,
-        p.unitprice,
-        p.[date],
-        (
-            select count(distinct p2.unitprice) + 1
-            from product_history p2
-            where p2.productid = p.productid
-              and YEAR(p2.[date]) = YEAR(p.[date])
-              and p2.unitprice > p.unitprice
-        ) as rank_pos
-    from product_history p
-    where p.productid < 10 
+WITH base AS (
+    SELECT
+        productid,
+        productname,
+        unitprice,
+        [date],
+        YEAR([date]) AS rok,
+        id
+    FROM product_history
+    WHERE productid <= 10
 )
-select *
-from ranking
-where rank_pos <= 4
-order by year, productid, rank_pos;
+, price_rank AS (
+    SELECT
+        b1.*,
+        COUNT(b2.unitprice) + 1 AS rn
+    FROM base b1
+    LEFT JOIN base b2
+        ON b1.productid = b2.productid
+       AND b1.rok = b2.rok
+       AND (
+            b2.unitprice > b1.unitprice
+         OR (b2.unitprice = b1.unitprice AND b2.[date] < b1.[date])
+         OR (b2.unitprice = b1.unitprice AND b2.[date] = b1.[date] AND b2.id < b1.id)
+       )
+    GROUP BY
+        b1.productid,
+        b1.productname,
+        b1.unitprice,
+        b1.[date],
+        b1.rok,
+        b1.id
+)
+SELECT *
+FROM price_rank
+WHERE rn <= 4
+ORDER BY rok, productid, rn;
 ```
 
 ![1](screen/zad2-result-ssms.png)
 ![1](screen/zad2-ssms.png)
+
+### Plany dla zapytań bez funkcji okna:
+-SQLite:
+![alt text](screen/zdjecie19.png)
+-PostgreSQL:
+![alt text](screen/zdjecie18.png)
+-MS SQL Server:
+![alt text](screen/zdjecie17.png)
+
+
+### Czasy zapytań bez funkcji okna:
+- MS SQL Server: 5 m 17 s
+- SQLite: 7 m 20 s
+- PostgreSQL: 8 m 19 s
 
 Zapytanie z funkcją okna jest bardziej wydajne, ponieważ wykonuje obliczenia w jednym przebiegu. Wersja z podzapytaniami jest wolniejsza, bo dla każdego wiersza przeszukuje tabelę. 
 
