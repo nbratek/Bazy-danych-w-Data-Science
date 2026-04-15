@@ -544,24 +544,26 @@ Rezultat wywołania powyższego zapytania:
 
 ![alt text](screen/zdjecie5.png)
 
-Kod SQL bez funkcji okna dla SQLite:
+Kod SQL bez funkcji okna dla PostgreSQL:
 
 ```sql
-select
+SELECT
     p1.id,
     p1.productid,
     p1.date,
-    p1.value * p1.quantity as sales_value,
+    p1.value * p1.quantity AS sales_value,
 
     (
-        select sum(p2.value * p2.quantity)
-        from product_history p2
-        where p2.productid = p1.productid
-          and strftime('%Y-%m', p2.date) = strftime('%Y-%m', p1.date)
-          and p2.date <= p1.date
-    ) as cumulative_sales
+        SELECT SUM(p2.value * p2.quantity)
+        FROM product_history p2
+        WHERE p2.productid = p1.productid
+          AND date_trunc('month', p2.date) = date_trunc('month', p1.date)
+          AND p2.date <= p1.date
+    ) AS cumulative_sales
 
-from product_history p1;
+FROM product_history p1
+ORDER BY p1.productid, p1.date
+LIMIT 100;
 ```
 Rezultat wywołania powyższego zapytania:
 ![alt text](screen/zdjecie6.png)
@@ -578,14 +580,25 @@ Rezultat wywołania powyższego zapytania:
 
 
 ### Plany dla zapytań z funkcją okna:
+Dla zapytań bez funkcji okna wynik został ograniczony do 100 wierszy, gdyż w przeciwnym razie koszt obliczeniowy byłby zbyt duży, aby uzyskać rozwiązanie w rozsądnym czasie.
+
 -SQLite:
 ![alt text](screen/zdjecie9.png)
+-PostgreSQL:
+![alt text](screen/zdjecie15.png)
+-MS SQL Server
+![alt text](screen/zdjecie16.png)
+
 
 <div style="page-break-after: always;"></div>
 
 ### Plany dla zapytań bez funkcji okna:
 -SQLite:
 ![alt text](screen/zdjecie8.png)
+-PostgreSQL:
+![alt text](screen/zdjecie13.png)
+-MS SQL Server:
+![alt text](screen/zdjecie14.png)
 
 
 <div style="page-break-after: always;"></div>
