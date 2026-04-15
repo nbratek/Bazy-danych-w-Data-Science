@@ -329,11 +329,11 @@ Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
 ```sql
 select p.productid, p.productname, p.unitprice,
-       (
-           select avg(x.unitprice)
-           from products x
-           where x.categoryid = p.categoryid
-       ) as avg_category_price
+(
+    select avg(x.unitprice)
+    from products x
+    where x.categoryid = p.categoryid
+) as avg_category_price
 from products p
 where p.unitprice > (
     select avg(x.unitprice)
@@ -362,12 +362,27 @@ having p.unitprice > avg(x.unitprice);
 
 ```
 
-
+### Plany zapytań dla MS SQL Server
 ![zad5](screen/plan-ssms4.1.png)
 
-![zad5](screen/plan-ssms4.2.png)
+![zad5](screen/mssql4_window.png)
 
-![zad5](screen/plan-ssms.4.3.png)
+![zad5](screen/mssql4_join.png)
+
+### Plany zapytań dla PostgreSQL
+![zad5.1](screen/postgres4_subquery.png)
+
+![zad5.1](screen/postgres4_window.png)
+
+![zad5.1](screen/postgres4_join.png)
+
+### Plany zapytań dla SQLite
+
+![zad5.2](screen/sqlite4_subquery.png)
+
+![zad5.2](screen/sqlite4_window.png)
+
+![zad5.2](screen/sqlite4_join.png)
 
 
  Najlepszym rozwiązaniem jest funkcja okna, bo pozwala policzyć średnią bez robienia osobnego zapytania i dodatkowego skanowania tabeli. Mimo że pojawiają się jakieś dodatkowe operacje jak sort czy spool, to i tak jest to bardziej opłacalne niż ponowne czytanie danych.
