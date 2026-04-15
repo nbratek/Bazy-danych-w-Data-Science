@@ -16,7 +16,7 @@
 
 ---
 
-**Imiona i nazwiska:**
+**Imiona i nazwiska:** Natalia Bratek, Jakub Karczewski 
 
 --- 
 
@@ -167,14 +167,24 @@ Teraz wykonaj poszczególne zapytania (najlepiej każde analizuj oddzielnie). Co
 
 <img src="screen/zad1-1-plan.png" alt="image" width="500" height="auto">
 
+Zapytanie pobiera wszystkie dane z połączenia dwóch tabel oraz filtruje po konkretnej dacie zamówienia.
+Zapytanie nie zwraca żadnego wyniku, ponieważ nic nie pasuje do danej daty.
+
+Plan składa się z dwóch Table Scan (jeden na salesorderheader, drugi na salesorderdetail) oraz Hash Match (Inner Join)
+Mozna zauważyć, że brakuje indeksu na kolumnie OrderDate. Pojawia się komunikat Missing Index. 
+Zapytanie można zoptymalizować dodając indeks na kolumnie OrderDate w tabeli salesorderheader.
+
 - zapytanie 1.1 
 
 
 <img src="screen/zad1-1.1-statistics.png" alt="image" width="500" height="auto">
 
-
-
 <img src="screen/zad1-1.1-plan.png" alt="image" width="500" height="auto">
+
+Zapytanie jest podobne do pierwszego, ale filtruje po innej dacie. Otrzymujemy wynik. 
+Plan oraz komunikat o brakującym indeksie jest podobny jak w pierwszym zapytaniu. Zapytanie można zoptymalizować dodając indeks na kolumnie OrderDate w tabeli salesorderheader.
+
+
 
 - zapytanie 2 
 
@@ -183,11 +193,22 @@ Teraz wykonaj poszczególne zapytania (najlepiej każde analizuj oddzielnie). Co
 <img src="screen/zad1-2-plan.png" alt="image" width="500" height="auto">
 
 
+Zapytanie pokazuje łączną ilość, rabaty i wartość sprzedaży dla każdego produktu w danym dniu. Uwzględnia tylko te przypadki, gdzie sprzedano co najmniej 100 sztuk.
+
+
+Plan zawiera dwa równoległe skanowania obu tabel (Table Scan i Parallelism), Filter, Hash Match (Aggregate) oraz Hash Match (Inner Join). Pojawiał się Missing Index na kolumnie SalesOrderID w salesorderdetail. Zapytanie można zoptymalizować dodając indeks na SalesOrderID (przyspieszy join) oraz indeks na kolumnach używanych w GROUP BY i kolumny w INCLUDE.
+
+
 - zapytanie 3 
+
 
 <img src="screen/zad1-3-statistics.png" alt="image" width="500" height="auto">
 
 <img src="screen/zad1-3-plan.png" alt="image" width="500" height="auto">
+
+Zapytanie pobiera dane zamówień dla zakresu 5 dni.
+
+Zapytanie nie zwraca żadnych wyników, mimo to czas jest wysoki, bo skanowana jest cała tabela. W zapytaniu IN na wielu datach bez indeksu powoduje pełne skanowanie przy każdej wartości. Zapytanie można zoptymalizować dodając indeks na OrderDate z INCLUDE dla kolumn wynikowych.
 
 
 
@@ -197,6 +218,11 @@ Teraz wykonaj poszczególne zapytania (najlepiej każde analizuj oddzielnie). Co
 
 <img src="screen/zad1-4-plan.png" alt="image" width="500" height="auto">
 
+
+Zapytanie wyszukuje zamówienia po numerze śledzenia przesyłki. 
+Aby zoptymalizować zapytanie można dodać indeks na kolumnie CarrierTrackingNumber. 
+
+Plan zawiera dwa Table Scan (na salesorderdetail i salesorderheader), Hash Match (Inner Join) oraz Sort. Pojawia się Missing Index na kolumnie CarrierTrackingNumber w salesorderdetail. Zapytanie można zoptymalizować dodając indeks na CarrierTrackingNumber (przyspieszy WHERE) oraz indeks na SalesOrderID w salesorderheader (przyspieszy join). Sortowanie na kilkudziesięciu wierszach wynikowych indeks raczej nie przyspieszy.
 
 ---
 
@@ -255,6 +281,9 @@ Sprawdź zakładkę **Tuning Options**, co tam można skonfigurować?
 
 
 <img src="screen/zad2-tuning-options.png" alt="image" width="500" height="auto">
+
+Można wybrać:
+- Physical Design Structures (PDS)
 
 ---
 
