@@ -568,15 +568,15 @@ LIMIT 100;
 Rezultat wywołania powyższego zapytania:
 ![alt text](screen/zdjecie6.png)
 
-### Czasy zapytań z funkcją okna:
-- MS SQL Server: 10 s
-- SQLite: 2,4 s
-- PostgreSQL: 1,5 s
+### Czasy zapytań z funkcją okna (bez ograniczenia wierszy):
+- MS SQL Server: 29 s
+- SQLite: 1,7 s
+- PostgreSQL: 7 s
 
 ### Czasy zapytań bez funkcji okna:
-- MS SQL Server: 34 s
-- SQLite: 1 min 47 s
-- PostgreSQL: 30 s
+- MS SQL Server: 18 s
+- SQLite: 1m 28s
+- PostgreSQL: 2m 9s
 
 
 ### Plany dla zapytań z funkcją okna:
