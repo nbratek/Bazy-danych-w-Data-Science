@@ -335,11 +335,7 @@ select p.productid, p.productname, p.unitprice,
     where x.categoryid = p.categoryid
 ) as avg_category_price
 from products p
-where p.unitprice > (
-    select avg(x.unitprice)
-    from products x
-    where x.categoryid = p.categoryid
-);
+where p.unitprice > avg_category_price
 ```
 
 ```sql
@@ -534,19 +530,24 @@ Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 > Wyniki:
 
 ```sql
-select *
-from (
-    select
-    id,
-    productid,
-    productname,
-    categoryid,
-    unitprice,
-    avg(unitprice) over (partition by categoryid) as avg_price_in_category
-    from product_history
-    where id < 100000
-) t
-where unitprice > avg_price_in_category;
+WITH t AS (
+    SELECT 
+        ph.id,
+        ph.productid,
+        ph.productname,
+        ph.categoryid,
+        ph.unitprice,
+        (
+            SELECT AVG(ph2.unitprice)
+            FROM product_history ph2
+            WHERE ph2.categoryid = ph.categoryid
+        ) AS avg_category_price
+    FROM product_history ph
+)
+SELECT *
+FROM t
+WHERE id BETWEEN 1 AND 2000
+  AND unitprice > avg_category_price;
 ```
 
 ```sql
@@ -592,33 +593,27 @@ order by id;
 ```
 
 
-```sql
-select 
-    p.id,
-    p.productid,
-    p.productname,
-    p.categoryid,
-    p.unitprice,
-    (
-        select avg(pp.unitprice)
-        from product_history pp
-        where pp.categoryid = p.categoryid
-    ) as avg_price_in_category
-from product_history p
-where p.id < 100000
-  and p.unitprice > (
-        select avg(pp.unitprice)
-        from product_history pp
-        where pp.categoryid = p.categoryid
-    )
-order by p.id;
-```
-
+### Wyniki zapytań dla MS SQL Server
 ![zad5](6.1.2.png)
 
 ![zad5](6.2.2.png)
 
 ![zad5](6.3.2.png)
+
+
+### Wyniki zapytań dla PostgreSQL:
+![zad51](screen/postgres6_subquery.png)
+
+![zad51](screen/postgres6_join.png)
+
+![zad51](screen/postgres6_window.png)
+
+### Wyniki zapytań dla SQLite:
+![zad51](screen/sqlite6_subquery.png)
+
+![zad51](screen/sqlite6_join.png)
+
+![zad51](screen/sqlite6_window.png)
 
 Ze względu na długi czas wykonania zapytań ograniczyliśmy liczbę wierszy.
 
