@@ -439,7 +439,21 @@ Dodaj indeks:
 create  index customer_store_cls_idx on customer(storeid)
 ```
 
-Jak zmienił się plan i czas? Czy jest możliwość optymalizacji?
+### Jak zmienił się plan i czas? Czy jest możliwość optymalizacji?
+
+Zmiany w planie wykonania:
+
+Zamiast Table Scan pojawia się Index Seek (dla storeid = 594) oraz Index Range Scan (dla BETWEEN).
+Optymalizator wykorzystuje indeks do bezpośredniego odnalezienia danych zamiast przeszukiwania całej tabeli.
+Może pojawić się Key Lookup, ponieważ używane jest SELECT * (czyli potrzeba pobrania dodatkowych kolumn spoza indeksu).
+
+Zmiany w czasie i koszcie:
+
+Znaczne zmniejszenie czasu wykonania zapytań.
+Wyraźny spadek kosztu zapytania (mniej odczytów logicznych).
+Największa poprawa widoczna dla zapytania z warunkiem =.
+
+Istnieje możliwość optymalizacji, można użyć indeksu klastrowanego
 
 
 ---
@@ -460,7 +474,17 @@ Dodaj indeks klastrowany:
 create clustered index customer_store_cls_idx on customer(storeid)
 ```
 
-Czy zmienił się plan/koszt/czas? Skomentuj dwa podejścia w wyszukiwaniu krotek.
+### Czy zmienił się plan/koszt/czas? Skomentuj dwa podejścia w wyszukiwaniu krotek.
+
+Zmiany w planie wykonania:  
+Plan nadal wykorzystuje Index Seek / Range Scan, ale teraz na indeksie klastrowanym.
+Znika operacja Key Lookup, ponieważ:
+dane tabeli są fizycznie przechowywane w indeksie klastrowanym.
+Dostęp do danych odbywa się bezpośrednio z jednego źródła.
+
+Zmiany w czasie i koszcie:  
+Dalsze zmniejszenie czasu wykonania (szczególnie dla zapytań zakresowych BETWEEN).
+Niższy koszt zapytania niż przy indeksie nieklastrowanym.
 
 
 ---
