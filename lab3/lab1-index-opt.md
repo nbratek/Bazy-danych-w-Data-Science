@@ -745,15 +745,25 @@ Przed dodaniem indeksu:
 
 <img src="screen/zad5.2-3-plan.png" alt="image" width="500" height="auto">
 
+### Dla wszystkich trzech zapytań:
+- wykonywany jest Table Scan (Clustered Index Scan)
+- przeszukiwana jest cała tabela
+- wysokie koszty I/O
+- brak optymalizacji
+
 
 
 Po dodaniu indeksu:
 
 - zapytanie 1 
 
+
 <img src="screen/zad5.2-1i-statistics.png" alt="image" width="500" height="auto">
 
 <img src="screen/zad5.2-1i-plan.png" alt="image" width="500" height="auto">
+
+### Plan:  
+ Index Seek, lastname jest pierwszą kolumną indeksu
 
 - zapytanie 2
 
@@ -761,13 +771,17 @@ Po dodaniu indeksu:
 
 <img src="screen/zad5.2-2i-plan.png" alt="image" width="500" height="auto">
 
+### Plan:  
+ Index Seek(najbardziej optymalny), wykorzystuje obie kolumny indeksu i bardzo selektywne filtrowanie.
+
 - zapytanie 3 
 
 <img src="screen/zad5.2-3i-statistics.png" alt="image" width="500" height="auto">
 
 <img src="screen/zad5.2-3i-plan.png" alt="image" width="500" height="auto">
 
-
+### Plan:   
+Index Scan lub Table Scan, bo firstname nie jest pierwszą kolumną indeksu
 
 ---
 
