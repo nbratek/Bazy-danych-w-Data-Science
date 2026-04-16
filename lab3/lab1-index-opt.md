@@ -551,8 +551,13 @@ where postalcode between '98000' and '99999'
 ```
 
 
-> Wyniki: 
-- bez indeksów
+# Wyniki: 
+### Bez indeksów:
+
+wykonywany jest Table Scan (Clustered Index Scan)
+przeszukiwana jest cała tabela
+najwyższy koszt I/O i czasu
+brak możliwości szybkiego filtrowania po postalcode
 
 
 <img src="screen/zad3-1-statistics.png" alt="image" width="500" height="auto">
@@ -564,7 +569,16 @@ where postalcode between '98000' and '99999'
 
 
 
-- przy wykorzystaniu  indeksu address_postalcode_1
+### przy wykorzystaniu  indeksu address_postalcode_1
+Plan:  
+- Index Seek po postalcode  
+- brak Key Lookup  
+- indeks jest pokrywający (covering index), wszystkie potrzebne kolumny są dostępne w indeksie
+
+Ogólne wnioski:   
+- bardzo dobra wydajność
+- minimalny koszt I/O
+- brak dodatkowych odwołań do tabeli
 
 <img src="screen/zad3-2-statistics.png" alt="image" width="500" height="auto">
 
@@ -572,6 +586,17 @@ where postalcode between '98000' and '99999'
 
 
 - przy wykorzystaniu  indeksu address_postalcode_2
+
+Plan:
+- również Index Seek
+- brak Key Lookup
+- Różnica:
+indeks jest większy
+więcej danych w kluczu, zatem mniej efektywna struktura drzewa B+
+
+Ogólne wnioski:
+
+- wydajność podobna do INCLUDE, ale struktura indeksu jest cięższa
 
 <img src="screen/zad3-3-statistics.png" alt="image" width="500" height="auto">
 
@@ -592,7 +617,10 @@ go
 ```
 
 
-Który jest większy? Jak można skomentować te dwa podejścia do indeksowania? Które kolumny na to wpływają?
+### Który jest większy? Jak można skomentować te dwa podejścia do indeksowania? Które kolumny na to wpływają?
+
+Address_postalcode_2 jest większy.
+Jest to spowodowane tym, że wszystkie kolumny są częścią klucza indeksu, klucz musi być przechowywany na każdym poziomie drzewa B+, zatem większe zużycie pamięci i stron.
 
 
 > Wyniki: 
