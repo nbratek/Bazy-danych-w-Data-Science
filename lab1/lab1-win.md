@@ -259,54 +259,11 @@ group by p.productid, p.productname, p.unitprice;
 
 
 
-- MS SQL Server:
-  - główny koszt we wszystkich zapytaniach to Clustered Index Scan 
-  - podzapytanie i cross join wykonują dwa Index Scan, a funkcja okna tylko jeden 
-  - Subquery:
-    -  dwa skany(dla AVG i dla głównych danych)
-    - Wynik AVG przechodzi przez Compute Scalar do każdego wiersza.
+W MS SQL Server najważniejszym operatorem w zapytaniach jest Clustered Index Scan dla tabeli products. Różnica sprowadza się głównie do liczby wykonań Full Index Scan: zapytanie z funkcją okna wykonuje go tylko raz (74% kosztu zapytania): średnia i dane główne liczone są w jednym przebiegu. Natomiast podzapytanie i cross join wykonują Index Scan dwa razy (po ~47-48% każdy, łącznie ~95% kosztu zapytania): jeden dla obliczenia AVG, drugi dla głównych danych. W podzapytaniu dwa skany łączone są przez Nested Loops. Wartość średniej przechodzi przez Compute Scalar do każdego wiersza. Cross Join łączy dwa skany przez Nested Loops i dodatkowo stosuje dwie agregacje.
+W PostgreSQL funkcja okna wykonuje jeden Seq Scan, po którym WindowAgg liczy średnią: total cost wynosi 2.73, a Actual Time 0.051 ms. Podzapytanie ma dwa Seq Scan i Aggregate dla obliczenia średniej: total cost 3.75, Actual Time 0.14 ms. Problem pojawia się przy joinie, żeby policzyć średnią ze wszystkich produktów trzeba użyć cross join, a cross join powoduje, że dla n wierszy mamy n² par do przetworzenia (w Nested Loop widać 5929 wierszy = 77 × 77). Dlatego jest wyższy koszt agregacji niż w pozostałych zapytaniach: total cost 108.45, Actual Time 1.21 ms. 
+SQLite nie pokazuje kosztów ani liczby wierszy przetworzonych. W SQLite w każdym z zapytań pojawiają się dwa bloki Full Scan. W podzapytaniu pojawia się osobny blok Subquery, a funkcja okna realizowana jest przez CO-ROUTINE.
+We wszystkich trzech systemach najbardziej efektywna jest funkcja okna, ponieważ wymaga tylko jednego skanu tabeli. Największe różnice widać w PostgreSQL: cross join tworzy n² wierszy (5929 zamiast 77), więc agregacja robi się droższa.
 
-  - Window func: 
-    - jeden skan: AVG i dane główne liczone razem.
-
-  - Cross Join 
-    - dwa skany: połączone są przez Nested Loop
-    - dwie agregacje
-  
-- POSTGRES:
-
-  - główny koszt to Seq Scan (pełny skan tabeli products)
-  - subquery i cross join wykonują dwa Seq Scan, a window function tylko jeden
-
-  - Subquery:
-    - są dwa skany (dla AVG i dla głównego SELECT)
-    - jest osobny Aggregate dla obliczenia średniej
-
-
-  - Window func:
-    - jest jeden skan
-
-  - Cross Join:
-    - Nested Loop łączy dwa skany
-    - jest agregacja na dużym zbiorze danych
-
-- SQLITE:
-
-  - główną operacją w każdym zapytaniu jest Full Scan 
-
-  - Subquery:
-    - jest blok Subquery
-    - wykorzystuje Full Scan
-
-  - Window func:
-    - występuje operacja CO-ROUTINE 
-    - wykorzystuje Full Scan 
-
-  - Cross Join:
-    - dwa Full Scan
-
-
- We wszystkich analizowanych systemach najbardziej efektywne jest użycie funkcji okna. Najmniej efektywne jest wykorzystanie CROSS JOIN. Powoduje on łączenie każdego wiersza z każdym (Nested Loop), czyli zwiększa się liczby operacji i kosztu. 
 
 
 ---
@@ -381,11 +338,11 @@ having p.unitprice > avg(x.unitprice);
 ![zad5.2](screen/sqlite4_join.png)
 
 
- Najlepszym rozwiązaniem jest funkcja okna, bo pozwala policzyć średnią bez robienia osobnego zapytania i dodatkowego skanowania tabeli. Mimo że pojawiają się jakieś dodatkowe operacje jak sort czy spool, to i tak jest to bardziej opłacalne niż ponowne czytanie danych.
 
-Podzapytanie jest mniej wydajne, bo widać, że tabela jest skanowana więcej niż raz: raz do głównego zapytania i drugi raz do policzenia średniej. Do tego dochodzi jeszcze osobna agregacja, więc robi się więcej operacji.
-
-Najgorzej wypada rozwiązanie z join, bo łączy dane przez Nested Loop i potem robi agregację na większym zbiorze. To powoduje więcej pracy dla silnika i bardziej rozbudowany plan wykonania.
+W MS SQL Server najważniejszym operatorem jest Clustered Index Scan dla tabeli products. Funkcja okna wykonuje jeden Index Scan, po którym następuje Sort po categoryid (32% kosztu, dominująca operacja w planie), Segment i Stream Aggregate liczące średnią dla kategorii, a na końcu Filter odrzuca wiersze poniżej średniej. Podzapytanie wykonuje dwa skany tabeli (11% i 44% kosztu, razem 55%). Zapytanie z left join łączy produkty z tej samej kategorii przez Nested Loops, oblicza średnią na połączonym zbiorze i dopiero na końcu filtruje wiersze klauzulą HAVING.
+W PostgreSQL funkcja okna wykonuje jeden Seq Scan, po którym WindowAgg liczy średnią dla okna: total cost 6.49, Actual Time 0.152 ms. Podzapytanie wymaga osobnego Aggregate dla każdej kategorii i drugiego skanu tabeli : total cost 207.96, Actual Time 0.762 ms, czyli drożej niż funkcja okna. Left join używa Hash Join po categoryid, który wewnątrz każdej kategorii łączy każdy wiersz z każdym (Hash Join zwraca 811 wierszy zamiast 77), dlatego agregacja wykonywana jest na większym zbiorze niż w pozostałych zapytaniach: total cost 19.27, Actual Time 0.208 ms.
+W SQLite funkcja okna ma pojedynczy Full Scan z CO-ROUTINE. Podzapytanie i join wymagają dwóch skanów tabeli products.
+We wszystkich trzech systemach najlepsza jest funkcja okna, bo liczy średnią raz bez ponownego skanowania tabeli. Podzapytanie jest mniej wydajne, bo tabela skanowana jest co najmniej dwa razy i jeszcze jest osobna agregacja. Najgorzej wypada join, który łączy dane przez Nested Loops lub Hash Join, przez co agregat liczony jest na większym zbiorze.
 
 
 ---
@@ -617,7 +574,12 @@ order by id;
 
 Ze względu na długi czas wykonania zapytań ograniczyliśmy liczbę wierszy.
 
-Zapytanie z funkcją okna jest najbardziej rozbudowane, ale operacje są wykonywane jednorazowo na całym zbiorze danych. Zapytanie z joinem ma mniej operacji, jednak wymaga łączenia danych i agregacji. W zapytaniu z podzapytaniem są operacje o większym koszcie, takie jak Clustered Index Scan i agregacja, co może powodować wolniejsze działanie.
+
+Najlepiej we wszystkich trzech systemach wypada funkcja okna, bo liczy średnią raz z sortowaniem po categoryid. W PostgreSQL funkcja okna na zbiorze: ma total cost 21576 i Actual Time ~570 ms. Podzapytanie  wykonuje dwa Full Scan tabeli (każdy cost 0..87668) i osobny Aggregate dla każdej kategorii (cost 88388), dlatego total cost rośnie znacznie więcej niż w przypadku z funkcją okna.
+Natomiast join wypada najgorzej, zwłaszcza w PostgreSQL, gdzie join tworzy bardzo dużo wierszy przed agregacją , końcowy total cost wynosi 1 757 236. W MS SQL Server różnice są mniejsze, bo wykorzystywane są Lazy Spool i Parallelism, ale i tak w planie funkcji okna dominuje Sort (61% kosztu), a w planie z joinem: Clustered Index Scan (88% kosztu). W SQLite join na tak dużej tabeli praktycznie nie wykonuje się bez ograniczenia liczby wierszy.
+
+
+
 
 
 ---
