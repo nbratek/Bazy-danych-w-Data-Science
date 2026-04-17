@@ -245,6 +245,16 @@ Zapytanie z funkcją okna jest bardziej wydajne, ponieważ wykonuje obliczenia w
 
 W SQLite zapytanie robi pełny skan tabeli, czyli sprawdza wszystkie dane. Przez to działa wolniej, szczególnie przy podzapytaniach. Funkcja okna trochę to poprawia.
 
+### Wnioski 
+- Wydajność funkcji okna:  
+ Wykorzystanie funkcji row_number() jest znacznie bardziej efektywne niż stosowanie tradycyjnych podzapytań. W przypadku dużych zbiorów danych (tabela product_history), zapytania bez funkcji okna trwają kilka minut dla i tak istotnie ograniczonych danych.
+  
+- Optymalizacja planu zapytania:  
+Funkcja okna wykonuje obliczenia w jednym przebiegu (skanie) danych.  Wersja alternatywna wymusza operacje typu Nested Loops oraz wielokrotne przeszukiwanie tabeli dla każdego wiersza, co drastycznie zwiększa koszt zapytania.
+- Różnice między SZBD:  
+We wszystkich testowanych systemach (MS SQL Server, PostgreSQL, SQLite) funkcje okna wykazały przewagę, przy czym SQLite bez ich użycia wykonuje pełny skan tabeli, co czyni go najmniej wydajnym przy złożonych podzapytaniach.
+
+
 ---
 
 
@@ -630,6 +640,18 @@ Dla zapytań bez funkcji okna wynik został ograniczony do 100 wierszy, gdyż w 
 -MS SQL Server:
 ![alt text](screen/zdjecie14.png)
 
+
+### Wnioski
+- Złożoność obliczeniowa sum narastających:  
+ Zadanie wykazuje, że obliczanie wartości narastających za pomocą tradycyjnego SQL jest skrajnie nieoptymalne na dużych zbiorach danych. Bez funkcji okna konieczne było ograniczenie wyników do 100 wierszy, aby zapytanie zakończyło się w rozsądnym czasie.
+
+
+- Przewaga SUM() OVER:  
+ Zastosowanie funkcji okna pozwala na uzyskanie wyników dla całego zbioru 2,2 mln wierszy w czasie kilku sekund bez ograniczenia liczby wierszy. Bez funkcji okna czas ten wydłuża się wielokrotnie nawet przy małej próbce danych.
+
+
+- Czytelność i prostota kodu:
+ Funkcje okna pozwalają na sformułowanie zwięzłego i czytelnego zapytania bez konieczności stosowania skomplikowanych JOINów tej samej tabeli ze sobą czy korelacji czasowych w podzapytaniach.
 
 <div style="page-break-after: always;"></div>
 
