@@ -14,7 +14,7 @@
 
 ---
 
-**Imię i nazwisko:** Natalia Bratek
+**Imiona i nazwiska:** Natalia Bratek i Jakub Karczewski
 
 ---
 
@@ -883,9 +883,388 @@ Proszę przygotować zestaw zapytań do danych, które:
 
 > Wyniki:
 
+### Schemat tabeli
+Tabela `OrdersTest` przechowuje przykładowe dane zamówień sklepu internetowego. 
+Zawiera informacje o klientach, produktach, datach zamówień, statusach oraz cenach produktów. 
+Tabela została wykorzystana do analizy wydajności różnych typów indeksów w SQL Server.
+
 ```sql
---  ...
+create table OrdersTest
+(
+    OrderID INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Order PRIMARY KEY NONCLUSTERED
+    CustomerID int,
+    ProductID int,
+    OrderDate datetime,
+    Status varchar(20),
+    Quantity int,
+    Price money,
+    City varchar(50)
+)
+
+set nocount on
+
+declare @i int = 1
+
+while @i <= 500000
+begin
+
+    insert into OrdersTest
+    (
+        CustomerID,
+        ProductID,
+        OrderDate,
+        Status,
+        Quantity,
+        Price,
+        City
+    )
+    values
+    (
+        abs(checksum(newid())) % 10000,
+        abs(checksum(newid())) % 5000,
+        dateadd(day, -abs(checksum(newid())) % 1000, getdate()),
+
+        case
+            when @i % 10 = 0 then 'Cancelled'
+            when @i % 5 = 0 then 'Pending'
+            else 'Completed'
+        end,
+
+        abs(checksum(newid())) % 20 + 1,
+        abs(checksum(newid())) % 5000 + 100,
+
+        case
+            when @i % 3 = 0 then 'Warsaw'
+            when @i % 3 = 1 then 'Krakow'
+            else 'Gdansk'
+        end
+    )
+    set @i += 1
+end
 ```
+
+Jak widać poprawnie wygenerowaliśmy 0,5 mln rekordów.
+
+![png](img/zad_32.png)
+
+### Opis danych
+
+- **OrderID** - unikalny numer zamówienia i klucz główny tabeli
+- **CustomerID** - numer identyfikacyjny klienta
+- **ProductID** - numer identyfikacyjny produktu
+- **OrderDate** - data oraz godzina zamówienia
+- **Status** - status zamówienia: completed, pending, cancelled lub error
+- **Quantity** - ilość produktów w zamówieniu
+- **Price** - cena jednostkowa produktu
+- **City** - miasto dostawy
+
+### Statystyki
+
+| Kategoria         | Wartość   |
+| ----------------  | --------- |
+| Liczba rekordów   | 500_000   |
+| Unikalni klienci  | 10_000    |
+| Unikalne produkty | 5_000     |
+| Zakres dat [dni]  | 1_000     |
+| Regiony           | 3         |
+| Statusy           | 3         |
+
+Kwerenda do wyznaczenia większości statystyk:
+```sql
+select count(distinct CustomerID) as unique_clients, min(OrderDate) as min_date,
+       max(OrderDate) as max_date, datediff(day, min(OrderDate), max(OrderDate)) as max_days_diff from OrdersTest
+```
+
+![png](img/zad_31.png)
+
+
+
+### Rozmiar danych
+
+Aby sprawdzić rozmiar miejsca na dysku zajmowanego przez tabelę użyto poniższego polecenia:
+
+```sql
+exec sp_spaceused 'OrdersTest'
+```
+
+![png](img/zad_33.png)
+
+Tabela zajmuje łącznie około 41MB, z czego dane stanowią około 32MB. Póki co w tabeli mamy jeden indeks nieklastrowany na kluczu głównym i zajmuje on niemal 9MB. Wartość unused jest równa zaledwie 88KB, z czego można wnioskowac, że strony danych są prawie całkowicie wypełnione.
+
+### Indeks klastrowany
+
+Sprawdzimy, jak baza danych radzi sobie z wyszukiwaniem transakcji z konkretnego przedziału czasowego. Chcemy sprawdzić, czy fizyczne posortowanie miliona wierszy według daty skróci czas dostępu do danych.
+
+#### Zapytanie bez indeksu
+
+```sql
+select * from OrdersTest
+where OrderDate between '2026-01-01' and '2026-01-31'
+```
+
+![png](img/zad_34.png)
+
+Server wykonuje Table Scan czyli musi przejść przez każdy z pół miliona wierszy, aby sprawdzić, czy data pasuje do zakresu. Czas wykonania zapytania wyniósł 157 ms.
+
+#### Tworzenie indeksu klastrowanego
+
+Teraz poukładamy tabelę fizycznie według daty. Wybieramy indeks klastrowany, ponieważ w tabeli może być tylko jeden, a data jest najczęstszym kryterium filtrowania + jest nam potrzebna w tym konkretnym przypadku.
+
+```sql
+create clustered index ix_OrderDate_clustered on OrdersTest(OrderDate)
+```
+
+Indeks klastrowany przebudowuje tabelę. Od teraz transakcje nie leżą w bazie chaotycznie, ale są poukładane chronologicznie. Dzieki temu baza szukając stycznia wie dokładnie, w którym miejscu na dysku ten styczeń się zaczyna i kończy.
+
+#### Zapytanie z indeksem
+
+![png](img/zad_35.png)
+
+Dzięki zastosowaniu indeksu klastrowanego serwer zamiast Table Scana użył Clustered Index Seeka. Dzięki temu baza nie traci czasu na przeglądanie miliona wierszy, zamiast tego wskakuje bezpośrednio w odpowiednie miejsce na dysku, gdzie zaczynają się dane z wybranego zakresu dat. Czas wykonania okazał się jednak być dłuższy niż bez indeksu (427 ms), co może być spowodowane tym, że w tabeli jest już indeks nieklastrowany na kluczu głównym i baza danych musi teraz utrzymywać dwa indeksy, co może wpływać na wydajność. Dodatkowo, jeśli dane są często aktualizowane, to utrzymanie indeksu klastrowanego może generować dodatkowe koszty związane z reorganizacją danych.
+Różnica jest natomiast wyraźnie widoczna w liczbie odczytywanych stron. Bez indeksu baza danych musiała odczytać 4000 stron, aby znaleźć pasujące wiersze, natomiast z indeksem klastrowanym odczytano tylko 9 stron, co świadczy o znacznej poprawie efektywności dostępu do danych.
+
+
+| Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
+| ----------- | -------- | --------- | ---------------- |
+| Bez indeksu | 3.5155   | 157       | 4000             |
+| Z indeksem  | 0.1078   | 427       | 9                |
+
+
+### Indeks nieklastrowany
+
+Sprawdzimy, jak baza danych radzi sobie z wyszukiwaniem transakcji dla konkretnego klienta. Chcemy sprawdzić czy utworzenie indeksu nieklastrowanego na id klienta przyspieszy dostęp do jego danych w tabeli, która jest już fizycznie posortowana wg daty.
+
+#### Zapytanie bez indeksu
+
+```sql
+select * from OrdersTest
+where CustomerID = 1000
+```
+
+![png](img/zad_36.png)
+
+Server wykonuje Clustered Index Scan czyli musi przejść przez każdy z miliona wierszy ułożonych chronologicznie względem OrderDate, aby znaleźć wszystkie transakcje dla wybranego klienta.
+
+#### Tworzenie indeksu nieklastrowanego
+
+Tworzymy osobną strukturę dla kolumny z id klienta. Wybieramy indeks nieklastrowany, ponieważ nasza tabela ma już swój fizyczny porządek wg daty, a my potrzebujemy szybkiego sposobu na wyszukiwanie po id klienta.
+
+```sql
+create nonclustered index ix_customerid_nonclustered on OrdersTest(CustomerID)
+```
+
+#### Zapytanie z indeksem
+
+![png](img/zad_37.png)
+
+Utworzenie indeksu nieklastrowanego całkowicie zmieniło plan wykonania. Baza zrezygnowała z pełnego skanowania za pomocą Clustered Index Scan. Zamiast tego używa operacji Index Seek, aby szybko odnaleźć identyfikator klienta w nowym indeksie, a następnie przez pętlę pobiera brakujące kolumny z tabeli głównej.
+
+| Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
+| ----------- | -------- | --------- | ---------------- |
+| Bez indeksu | 3.536    | 492       | 4041             |
+| Z indeksem  | 0.163    | 294       | 131              |
+
+Zastosowanie indeksu nieklastrowanego znacząco poprawiło wydajność zapytania. Liczba odczytów logicznych spadła z 4041 do 131. Koszt zapytania spadł o ponad 90%, czas wykonania również się zmniejszył, lecz mniej znacząco. Optymalizacja zapytań wyszukujących pojedyncze wartości przy użyciu indeksu nieklastrowanego jest w tym przypadku skuteczna i chroni bazę przed niepotrzebnym skanowaniem dużej ilości rekordów.
+
+
+### Covering Index
+W tym przykładzie będziemy korzystać z utworzonych wyżej indeksów: klastrowanego na OrderDate oraz nieklastrowanego na CustomerID. Sprawdzimy, jak baza danych radzi sobie z zapytaniem, które może być obsłużone wyłącznie przez indeksy, bez konieczności odwoływania się do tabeli głównej.
+
+#### Zapytanie z indeksem pokrywającym
+
+```sql
+select OrderDate from OrdersTest
+where CustomerID = 1000
+```
+![png](img/zad_38.png)
+
+#### Zapytanie bez indeksu (wymuszone użycie klastrowanego po dacie)
+
+```sql
+SELECT OrderDate
+FROM OrdersTest WITH (INDEX(ix_OrderDate_clustered))
+WHERE CustomerID = 1000;
+```
+
+![png](img/zad_39.png)
+
+| Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
+| ----------- | -------- | --------- | ---------------- |
+| Bez indeksu | 3.536    | 475       | 4041             |
+| Z indeksem  | 0.163    | 412       | 3                |
+
+Można zauważyć, że zapytanie z indeksem pokrywającym jest znacznie bardziej efektywne. Baza danych może zaspokoić zapytanie wyłącznie z indeksu nieklastrowanego, ponieważ wszystkie potrzebne kolumny (CustomerID i OrderDate) są zawarte w tym indeksie (ponieważ indeks klastrowany zawiera indeks nieklastrowany). Dzięki temu liczba odczytanych stron spadła do zaledwie 3, a koszt zapytania został drastycznie zredukowany. W przypadku wymuszenia użycia indeksu klastrowanego, baza danych musi nadal skanować dużą liczbę rekordów, co skutkuje znacznie wyższym kosztem i czasem wykonania.
+
+### Przykład 3 - Indeks z INCLUDE
+
+Będziemy chcieli teraz wyświetlić historię klienta, obejmującą datę, kwotę oraz status transakcji.
+
+Indeksy, które na ten moment posiada baza:
+![png](./wyniki/310.png)
+
+Na początek sprawdzimy, jak zachowuje się zapytanie bez dodatkowego indeksu:
+
+#### Zapytanie bez indeksu
+```sql
+select OrderDate, Status, City from OrdersTest
+where customerid = 1234
+```
+
+![png](img/zad_310.png)
+
+#### Zapytanie z indeksem nieklastrowanym na customerid
+
+```sql
+select OrderDate, Status, City from OrdersTest
+where customerid = 1000
+```
+![png](img/zad_311.png)
+
+#### Zapytanie z indeksem nieklastrowanym na customerid, który zawiera dodatkowe kolumny (INCLUDE)
+
+##### Tworzenie indeksu z INCLUDE
+
+```sql
+create nonclustered index ix_customerid_include
+    on OrdersTest(CustomerID) include (Status, City)
+```
+
+###### Resultat zapytania z indeksem z INCLUDE
+![png](img/zad_312.png)
+
+
+
+| Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
+| ----------- | -------- | --------- | ---------------- |
+| Bez indeksu | 3.536    | 460       | 4041             |
+| Z indeksem  | 0.162    | 392       | 131              |
+| Include     | 0.003    | 365       | 3                |
+
+Zastosowanie indeksu z INCLUDE pozwoliło na jeszcze większą optymalizację zapytania. Baza danych była w stanie zaspokoić zapytanie wyłącznie z indeksu, ponieważ wszystkie potrzebne kolumny (CustomerID, Status, City i OrderDate będące kluczem indeksu klastrowanego) były zawarte w tym indeksie. Dzięki temu liczba odczytanych stron spadła do zaledwie 3, a koszt zapytania został drastycznie zredukowany w porównaniu do zapytania bez indeksu oraz z indeksem nieklastrowanym bez INCLUDE. Czasowo też różnica jest widoczna, jednak nie aż tak, ze względu na to, że we wszystkich przypadkach do czasu był wliczany czas komunikacji z bazą danych.
+
+
+### Filtered Index (Indeks warunkowy)
+
+W tym przykładzie sprawdzimy, jak zoptymalizować zapytania o rzadkie zdarzenia. Zamiast indeksować całą tabelę, zostanie stworzony indeks zawierający tylko rekordy ze statusem zamówienia jako anulowane. Dzięki temu zapytania szukające błędów będą znacznie szybsze, ponieważ będą operować na znacznie mniejszym zbiorze danych.
+
+#### Sprawdzenie liczby anulowanych zamówień
+```sql
+select count(*) from OrdersTest
+where status = 'Cancelled'
+```
+
+#### Zmniejszenie liczby anulowanych zamówień do 5 procent
+
+```sql
+DECLARE @TotalRows INT;
+DECLARE @TargetCancelled INT;
+DECLARE @CurrentCancelled INT;
+DECLARE @RowsToUpdate INT;
+
+SELECT @TotalRows = COUNT(*)
+FROM OrdersTest;
+
+SET @TargetCancelled = @TotalRows * 0.05;
+
+SELECT @CurrentCancelled = COUNT(*)
+FROM OrdersTest
+WHERE Status = 'Cancelled';
+
+SET @RowsToUpdate = @CurrentCancelled - @TargetCancelled;
+
+UPDATE TOP (@RowsToUpdate) OrdersTest
+SET Status = 'Pending'
+WHERE Status = 'Cancelled';
+```
+
+#### Ilość zamówień per status
+```sql
+select Status, count(*) as num from OrdersTest
+group by Status
+```
+
+![png](img/zad_313.png)
+
+
+#### Zapytanie
+
+Szukanie anulowanych zamówień, wraz z informacją o kliencie i mieście dostawy.
+
+```sql
+select OrderID, CustomerID, City
+from OrdersTest
+where status = 'Cancelled'
+```
+
+#### Bez dedykowanego indeksu
+
+![png](img/zad_314.png)
+
+Silnik bazy danych wykonuje pełne skanowanie głównej tabeli za pomocą Clustered Index Scan.
+
+#### Tworzenie indeksu filtrowanego
+
+```sql
+create nonclustered index ix_cancelled
+on OrdersTest (OrderID)
+include (CustomerID, City)
+where Status = 'Cancelled'
+```
+
+#### Z Indeksem filtrowany
+
+![png](img/zad_315.png)
+
+Plan zapytania uprościł się. Baza wykonała operację Index Scan na indeksie filtrowanym. Wydaje się to być w tym przypadku optymalne, ponieważ indeks zawiera wyłącznie szukane błędy, więc silnik odczytuje po kolei całą jego zawartość bez konieczności nawigowania po drzewie indeksu jak byloby w przypadku Index Seeka.
+
+| Zapytanie    | Koszt     | Czas (ms) | Odczytane strony |
+| ------------ | --------- | --------- | ---------------- |
+| Brak indeksu | 3.536     | 15        | 80               |
+| Z indeksem   | 0.034     | 6         | 5                |
+
+Jak widać indeksy warunkowe dla danych o wysokiej selektywności bardzo dobrze sobie radzą. Liczba odczytanych stron spadła z ponad 80 do 5, a koszt zapytania zmniejszył o około 98 %.
+
+
+### Indeks kolumnowy
+
+W tym przykładzie zostanie zanalizowanie zapytanie wymagające pogrupowania i zagregowania dużej liczby rekordów dla poszczególnych klientów.
+
+#### Zapytanie
+
+```sql
+select
+    customerID,
+    count(*) as orders_count,
+    sum(Quantity * Price) as total_bought
+from OrdersTest
+group by customerID
+```
+
+#### Bez indeksu
+
+![png](img/zad_316.png)
+
+Silnik bazy danych użył indeksu klastrowanego, aby odczytać dane, ale musiał przetworzyć wszystkie rekordy, aby pogrupować je według klienta i obliczyć sumę. Plan zapytania zawiera operacje zrównoleglenia i przesyłania strumieni, co wskazuje na to, że baza danych próbuje zoptymalizować przetwarzanie dużej ilości danych, ale nadal musi odczytać wszystkie rekordy, co jest kosztowne.
+
+#### Tworzenie indeksu kolumnowego
+
+```sql
+CREATE NONCLUSTERED COLUMNSTORE INDEX IX_OrdersTest_CS
+ON OrdersTest(CustomerID, Quantity, Price);
+```
+
+#### Z indeksem
+
+![png](img/zad_317.png)
+
+Plan zapytania uległ znacznemu uproszczeniu. Silnik wykonuje operację Index Scan na nowym indeksie kolumnowym. Operatory zrównoleglenia i przesyłania strumieni zostały wyeliminowane z planu, a proces agregacji jest realizowany jednoetapowo.
+
+| Zapytanie   | Koszt    | Czas (ms) | Odczytane strony         |
+| ----------- | -------- | --------- | ------------------------ |
+| Bez indeksu | 3.592    | 209       | 4239                     |
+| Z indeksem  | 0.442    | 91        | 1305 (lob logical reads) |
+
+Indeks kolumnowy znacząco poprawił wydajność zapytania agregującego dużą ilość danych. Liczba odczytanych stron spadła z 4239 do 1305, a koszt zapytania został zredukowany o ponad 87%. Czas wykonania również uległ znacznemu skróceniu, co świadczy o efektywności indeksów kolumnowych w przypadku zapytań analitycznych i agregujących.
 
 |         |                                                                          |     |
 | ------- | ------------------------------------------------------------------------ | --- |
