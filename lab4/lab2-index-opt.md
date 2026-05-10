@@ -1100,7 +1100,7 @@ Można zauważyć, że zapytanie z indeksem pokrywającym jest znacznie bardziej
 Będziemy chcieli teraz wyświetlić historię klienta, obejmującą datę, kwotę oraz status transakcji.
 
 Indeksy, które na ten moment posiada baza:
-![png](./wyniki/310.png)
+![png](img/zad_318.png)
 
 Na początek sprawdzimy, jak zachowuje się zapytanie bez dodatkowego indeksu:
 
