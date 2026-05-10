@@ -1061,8 +1061,8 @@ Utworzenie indeksu nieklastrowanego całkowicie zmieniło plan wykonania. Baza z
 
 | Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
 | ----------- | -------- | --------- | ---------------- |
-| Bez indeksu | 3.536    | 492       | 4041             |
-| Z indeksem  | 0.163    | 294       | 131              |
+| Bez indeksu | 3.536    | 105       | 4041             |
+| Z indeksem  | 0.163    | 20        | 131              |
 
 Zastosowanie indeksu nieklastrowanego znacząco poprawiło wydajność zapytania. Liczba odczytów logicznych spadła z 4041 do 131. Koszt zapytania spadł o ponad 90%, czas wykonania również się zmniejszył, lecz mniej znacząco. Optymalizacja zapytań wyszukujących pojedyncze wartości przy użyciu indeksu nieklastrowanego jest w tym przypadku skuteczna i chroni bazę przed niepotrzebnym skanowaniem dużej ilości rekordów.
 
@@ -1090,8 +1090,8 @@ WHERE CustomerID = 1000;
 
 | Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
 | ----------- | -------- | --------- | ---------------- |
-| Bez indeksu | 3.536    | 475       | 4041             |
-| Z indeksem  | 0.163    | 412       | 3                |
+| Bez indeksu | 3.536    | 88        | 4041             |
+| Z indeksem  | 0.163    | 32        | 3                |
 
 Można zauważyć, że zapytanie z indeksem pokrywającym jest znacznie bardziej efektywne. Baza danych może zaspokoić zapytanie wyłącznie z indeksu nieklastrowanego, ponieważ wszystkie potrzebne kolumny (CustomerID i OrderDate) są zawarte w tym indeksie (ponieważ indeks klastrowany zawiera indeks nieklastrowany). Dzięki temu liczba odczytanych stron spadła do zaledwie 3, a koszt zapytania został drastycznie zredukowany. W przypadku wymuszenia użycia indeksu klastrowanego, baza danych musi nadal skanować dużą liczbę rekordów, co skutkuje znacznie wyższym kosztem i czasem wykonania.
 
@@ -1145,7 +1145,7 @@ Zastosowanie indeksu z INCLUDE pozwoliło na jeszcze większą optymalizację za
 
 ### Filtered Index (Indeks warunkowy)
 
-W tym przykładzie sprawdzimy, jak zoptymalizować zapytania o rzadkie zdarzenia. Zamiast indeksować całą tabelę, zostanie stworzony indeks zawierający tylko rekordy ze statusem zamówienia jako anulowane. Dzięki temu zapytania szukające błędów będą znacznie szybsze, ponieważ będą operować na znacznie mniejszym zbiorze danych.
+W tym przykładzie sprawdzimy, jak zoptymalizować zapytania o rzadkie zdarzenia. Zamiast indeksować całą tabelę, zostanie stworzony indeks zawierający tylko rekordy ze statusem zamówienia jako anulowane. Dzięki temu zapytania będą znacznie szybsze, ponieważ będą operować na znacznie mniejszym zbiorze danych.
 
 #### Sprawdzenie liczby anulowanych zamówień
 ```sql
