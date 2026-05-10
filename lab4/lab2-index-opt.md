@@ -1020,14 +1020,14 @@ Indeks klastrowany przebudowuje tabelę. Od teraz transakcje nie leżą w bazie 
 
 ![png](img/zad_35.png)
 
-Dzięki zastosowaniu indeksu klastrowanego serwer zamiast Table Scana użył Clustered Index Seeka. Dzięki temu baza nie traci czasu na przeglądanie miliona wierszy, zamiast tego wskakuje bezpośrednio w odpowiednie miejsce na dysku, gdzie zaczynają się dane z wybranego zakresu dat. Czas wykonania okazał się jednak być dłuższy niż bez indeksu (427 ms), co może być spowodowane tym, że w tabeli jest już indeks nieklastrowany na kluczu głównym i baza danych musi teraz utrzymywać dwa indeksy, co może wpływać na wydajność. Dodatkowo, jeśli dane są często aktualizowane, to utrzymanie indeksu klastrowanego może generować dodatkowe koszty związane z reorganizacją danych.
-Różnica jest natomiast wyraźnie widoczna w liczbie odczytywanych stron. Bez indeksu baza danych musiała odczytać 4000 stron, aby znaleźć pasujące wiersze, natomiast z indeksem klastrowanym odczytano tylko 9 stron, co świadczy o znacznej poprawie efektywności dostępu do danych.
+Dzięki zastosowaniu indeksu klastrowanego serwer zamiast Table Scana użył Clustered Index Seeka. Dzięki temu baza nie traci czasu na przeglądanie miliona wierszy, zamiast tego wchodzi bezpośrednio w odpowiednie miejsce na dysku, gdzie zaczynają się dane z wybranego zakresu dat. Czas wykonania zapytania spadł do 35 ms, co jest znaczną poprawą w porównaniu do 95 ms bez indeksu.
+Różnica jest natomiast wyraźnie widoczna w liczbie odczytywanych stron. Bez indeksu baza danych musiała odczytać 4000 stron(czyli praktycznie wszystkie), aby znaleźć pasujące wiersze, natomiast z indeksem klastrowanym odczytano tylko 9 stron, co świadczy o znacznej poprawie efektywności dostępu do danych.
 
 
 | Zapytanie   | Koszt    | Czas (ms) | Odczytane strony |
 | ----------- | -------- | --------- | ---------------- |
-| Bez indeksu | 3.5155   | 157       | 4000             |
-| Z indeksem  | 0.1078   | 427       | 9                |
+| Bez indeksu | 3.5155   | 95        | 4000             |
+| Z indeksem  | 0.1078   | 35        | 9                |
 
 
 ### Indeks nieklastrowany
