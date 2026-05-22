@@ -19,6 +19,13 @@ Swoje odpowiedzi wpisuj w miejsca oznaczone jako:
 --  ...
 ```
 
+<style>
+pre, code {
+    font-size: 9px !important;
+    line-height: 1.3;
+}
+</style>
+
 ---
 
 ### Ważne/wymagane są komentarze.
@@ -98,6 +105,9 @@ select productid, productname, unitprice, categoryid,
 from products;
 ```
 
+![1](screen2/1.png)
+![1](screen2/2.png)
+
 Wykonaj polecenie, zaobserwuj wynik. Porównaj funkcje row_number(), rank(), dense_rank().  Skomentuj wyniki. 
 
 Spróbuj uzyskać ten sam wynik bez użycia funkcji okna
@@ -133,11 +143,15 @@ from products p
 order by p.categoryid, p.unitprice desc, p.productid
 ```
 
-![1](screen/zad1-result.png)
-![1](screen/zad1.png)
+![1](screen2/1.png)
+![1](screen2/3.png)
 
 
-Zapytanie jest mniej wydajne, ponieważ dla każdego wiersza wykonywane są podzapytania, co widać w operacjach Nested Loop. Powoduje to wielokrotne przeszukiwanie tabeli i wydłuża czas wykonania.
+#### Wniosek
+
+- Zapytanie z funkcją okna ma koszt 6.11, używa jednego Seq Scan tabeli products, Sort i WindowAgg
+- Wersja bez funkcji okna ma koszt 539.43, wykonuje cztery Seq Scan tabeli products
+- Zapytanie z funkcją okna ma mniejszy koszt 
 
 ---
 # Zadanie 2
@@ -185,6 +199,32 @@ where rank_pos <= 4
 order by year, productid, rank_pos;
 ```
 
+
+
+### Zapytanie z funkcją okna (row_number) z ograniczeniem wierszy dla MS SQL Server
+
+```sql 
+with ranking as (
+    select 
+        YEAR([date]) as year,
+        productid,
+        productname,
+        unitprice,
+        [date],
+        row_number() over (
+            partition by productid, YEAR([date]) 
+            order by unitprice desc
+        ) as rank_pos
+    from product_history
+    where productid <= 10        
+)
+select *
+from ranking
+where rank_pos <= 4
+order by year, productid, rank_pos;
+```
+
+
 ### Zapytanie bez funkcji okna z ograniczeniem wierszy dla MS SQL Server:
 ```sql
 WITH base AS (
@@ -225,34 +265,94 @@ WHERE rn <= 4
 ORDER BY rok, productid, rn;
 ```
 
-![1](screen/zad2-result-ssms.png)
-
-### Plany dla zapytań bez funkcji okna:
--SQLite:
-![alt text](screen/zdjecie19.png)
--PostgreSQL:
-![alt text](screen/zdjecie18.png)
--MS SQL Server:
-![alt text](screen/zdjecie17.png)
 
 
-### Czasy zapytań bez funkcji okna:
-- MS SQL Server: 5 m 17 s
-- SQLite: 7 m 20 s
-- PostgreSQL: 8 m 19 s
+MS SQL Server 
 
-Zapytanie z funkcją okna jest bardziej wydajne, ponieważ wykonuje obliczenia w jednym przebiegu. Wersja z podzapytaniami jest wolniejsza, bo dla każdego wiersza przeszukuje tabelę. 
+![1](screen2/15.png) 
 
-W SQLite zapytanie robi pełny skan tabeli, czyli sprawdza wszystkie dane. Przez to działa wolniej, szczególnie przy podzapytaniach. Funkcja okna trochę to poprawia.
+- pierwsze zapytanie 
+
+![1](screen2/16.png)
+
+- drugie zapytanie 
+
+![1](screen2/17.png)
+
+- trzecie zapytanie 
+
+![1](screen2/18.png)
+
+
+PostgreSQL 
+
+- pierwsze zapytanie
+
+![1](screen2/25.png)
+
+![1](screen2/26.png)
+
+- drugie zapytanie 
+
+![1](screen2/27.png)
+
+- trzecie zapytanie  
+
+![1](screen2/28.png)
+
+
+SQLite
+
+- pierwsze zapytanie
+
+![1](screen2/32.png)
+
+![1](screen2/33.png)
+
+- drugie zapytanie 
+
+![1](screen2/34.png)
+
+
+- trzecie zapytanie  
+
+![1](screen2/35.png)
+
+
+
+
+
+### Czasy zapytań
+
+| Baza danych | Funkcja okna | Funkcja okna z ograniczeniem | Bez funkcji okna z ograniczeniem |
+|-------------|--------------|------------------------------|----------------------------------|
+| MS SQL Server | 2 s | 0 s | 4 s |
+| PostgreSQL | 39 s | 5 s | 4 min 34 s |
+| SQLite | 21 s | 2 s | 9 min 32 s |
+
+
 
 ### Wnioski 
-- Wydajność funkcji okna:  
- Wykorzystanie funkcji row_number() jest znacznie bardziej efektywne niż stosowanie tradycyjnych podzapytań. W przypadku dużych zbiorów danych (tabela product_history), zapytania bez funkcji okna trwają kilka minut dla i tak istotnie ograniczonych danych.
-  
-- Optymalizacja planu zapytania:  
-Funkcja okna wykonuje obliczenia w jednym przebiegu (skanie) danych.  Wersja alternatywna wymusza operacje typu Nested Loops oraz wielokrotne przeszukiwanie tabeli dla każdego wiersza, co drastycznie zwiększa koszt zapytania.
-- Różnice między SZBD:  
-We wszystkich testowanych systemach (MS SQL Server, PostgreSQL, SQLite) funkcje okna wykazały przewagę, przy czym SQLite bez ich użycia wykonuje pełny skan tabeli, co czyni go najmniej wydajnym przy złożonych podzapytaniach.
+
+#### MS SQL Server
+- Zapytanie z funkcją okna ma Clustered Index Scan dla tabeli product_history , Window Aggregate i Sort. Skanuje całą tabelę, 2310000 wierszy
+- Zapytanie z funkcją okna z ograniczeniem ma podobny plan, ale przetwarza mniej wierszy (300000)
+- Zapytanie bez funkcji okna ma dwa Clustered Index Scan i Hash Match
+- Funkcja okna ma prostszy plan niż wersja bez okna
+
+#### PostgreSQL
+- Zapytanie z funkcją okna ma koszt 955055.55, używa Seq Scan, Sort i WindowAgg
+- Zapytanie z funkcją okna z ograniczeniem ma koszt 140261.31, dużo mniej niz wersja bez ograniczenia
+- Zapytanie bez funkcji okna ma koszt 459640.6, ma Merge Join i Aggregate
+- Zapytanie bez funkcji okna ma duzo większy koszt niz funkcja okna z ograniczeniem
+
+
+#### SQLite
+#### SQLite
+- Pierwsze i drugie zapytanie (z funkcją okna) mają taki sam plan, m.in. Full Scan tabel product_history i ranking
+- Trzecie zapytanie (bez funkcji okna) ma trzy Full Scan tabeli product_history
+- Wersja bez funkcji okna ma dużo więcej operacji i skanów tabeli
+- Funkcja okna ma prostszy plan w MS SQL Server, PostgreSQL, SQLite
 
 
 ---
@@ -266,25 +366,24 @@ Wykonaj polecenia, zaobserwuj wynik. Jak działają funkcje `lag()`, `lead()`
 
 ```sql
 select productid, productname, categoryid, date, unitprice,  
-       lag(unitprice) over (partition by productid order by date)   
-as previousprodprice,  
-       lead(unitprice) over (partition by productid order by date)   
-as nextprodprice  
+       lag(unitprice) over (partition by productid order by date) as previousprodprice,  
+       lead(unitprice) over (partition by productid order by date) as nextprodprice  
 from product_history  
 where productid = 1 and year(date) = 2022  
 order by date;  
   
-with t as (select productid, productname, categoryid, date, unitprice,  
-                  lag(unitprice) over (partition by productid   
-order by date) as previousprodprice,  
-                  lead(unitprice) over (partition by productid   
-order by date) as nextprodprice  
-           from product_history  
-           )  
+with t as (select productid, productname, categoryid, date, unitprice, 
+lag(unitprice) over (partition by productid order by date) as previousprodprice,  
+                  lead(unitprice) over (partition by productid order by date) as nextprodprice  
+           from product_history)  
 select * from t  
 where productid = 1 and year(date) = 2022  
 order by date;
 ```
+
+![1](screen2/12.png)
+![1](screen2/13.png)
+![1](screen2/14.png)
 
 Jak działają funkcje `lag()`, `lead()`?
 
@@ -294,6 +393,8 @@ Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres 
 
 ---
 > Wyniki: 
+
+
 Funkcja lag() zwraca wartość z poprzedniego wiersza, a dla pierwszego wiersza wartość wynosi NULL (brak poprzedniego).
 Funkcja lead() zwraca wartość z następnego wiersza, a dla ostatnego wiersza wartość wynosi NULL(brak następnego).
 
@@ -303,19 +404,13 @@ select p.productid,
        p.categoryid,
        p.date,
        p.unitprice,
-
        (select top 1 p1.unitprice
         from product_history p1
-        where p1.productid = p.productid
-          and year(p1.date) = 2022
-          and p1.date < p.date
+        where p1.productid = p.productid and year(p1.date) = 2022 and p1.date < p.date
         order by p1.date desc) as previousprodprice,
-
        (select top 1 p1.unitprice
         from product_history p1
-        where p1.productid = p.productid
-          and year(p1.date) = 2022
-          and p1.date > p.date
+        where p1.productid = p.productid and year(p1.date) = 2022 and p1.date > p.date
         order by p1.date asc) as nextprodprice
 
 from product_history p
@@ -329,8 +424,12 @@ order by p.date;
 ![1](screen/zad3.1.png)
 ![1](screen/zad3.2.png)
 
-W zapytaniu bez funkcji okna pojawiają się operacje Nested Loop oraz dodatkowe Index Seek, co oznacza, że dla każdego wiersza wykonywane są podzapytania. Powoduje to wielokrotne przeszukiwanie tabeli i znacznie gorszą wydajność.
+#### Wnioski 
 
+- Funkcja okna ma jeden Clustered Index Scan tabeli `product_history`, używa Window Spool, Segment i Sequence Project.
+- W obu poleceniach z funkcją okna jest po jednym Clustered Index Scan tabeli product_history
+- Wersja bez funkcji okna ma Clustered Index Scan, dwa Index Seek 
+- Wersja bez funkcji okna ma dużo więcej operacji, funkcja okna ma prostszy plan
 ---
 
 
@@ -362,36 +461,51 @@ with order_values as (
         o.OrderDate,
         o.Freight,
         CAST(
-            SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) + o.Freight 
-            AS decimal(10,2)
-        ) as order_total
+            SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) + o.Freight AS decimal(10,2)) as order_total
     from Orders o
     join [Order Details] od on o.OrderID = od.OrderID
     join Customers c on o.CustomerID = c.CustomerID
-    group by 
-        c.CompanyName, o.CustomerID, o.OrderID, o.OrderDate, o.Freight
-)
-
+    group by c.CompanyName, o.CustomerID, o.OrderID, o.OrderDate, o.Freight)
 select 
     CompanyName,
     OrderID,
     OrderDate,
     order_total,
-
     lag(OrderID) over (partition by CustomerID order by OrderDate) as prev_order_id,
     lag(OrderDate) over (partition by CustomerID order by OrderDate) as prev_order_date,
     lag(order_total) over (partition by CustomerID order by OrderDate) as prev_order_value
-
 from order_values
 order by CompanyName, OrderDate;
 ```
+- MS SQL SERVER 
 
 ![1](screen/zad4-result.png)
 ![1](screen/zad4.1.png)
 ![1](screen/zad4.2.png)
 
 
-Zapytanie najpierw łączy tabele i liczy wartość zamówień, a potem używa funkcji lag(). W planie widać sortowanie i joiny, które mają największy koszt. Całość jest wydajna, bo nie ma podzapytań dla każdego wiersza.
+- PostreSQL
+
+![1](screen2/23.png)
+
+![1](screen2/24.png)
+
+
+### Wnioski
+
+#### MS SQL Server
+- Występuje jeden skan każdej tabeli: Clustered Index Scan dla Orders, Order Details, Index Scan dla Customers
+- Są dwa Hash Match (Inner Join) do połączenia tabel 
+
+#### PostgreSQL
+- Jest jeden Seq Scan każdej tabeli: customers, orders, orderdetails
+- Występują dwa Hash Join do połączenia tabel
+- Funkcja okna jest realizowana przez Transformation (WindowAgg)
+- Koszt wynosi 475.76
+
+
+
+
 ---
 
 
@@ -424,7 +538,9 @@ order by categoryid, unitprice desc;
 <div style="page-break-after: always;"></div>
 
 ### Wyniki: 
-![alt text](screen/zdjecie1.png)
+![1](screen2/4.png)
+
+![1](screen2/5.png)
 
 
 `first_value` bierze wartość z pierwszego wiersza w danym oknie, czyli zwraca najdroższy produkt w danej kategorii.  
@@ -452,7 +568,40 @@ order by categoryid, unitprice desc;
 
 ![alt text](screen/zdjecie2.png)
 
+![1](screen2/6.png)
+
 <div style="page-break-after: always;"></div>
+
+
+```sql
+select productid, productname, unitprice, categoryid,
+    first_value(productname) over (
+        partition by categoryid
+        order by unitprice desc
+    ) as first,
+    last_value(productname) over (
+        partition by categoryid
+        order by unitprice desc
+        rows between current row and unbounded following
+    ) as last
+from products
+order by categoryid, unitprice desc;
+```
+
+
+![1](screen2/7.png)
+![1](screen2/8.png)
+
+
+
+### Wnioski
+
+- Wersja bez rows between ma koszt 5.92, używa jednego Seq Scan, Sort i jednego WindowAgg 
+- Wersja z rows between unbounded preceding and unbounded following ma koszt 7.07 i używa dwóch WindowAgg 
+- Wersja z rows between current row and unbounded following ma koszt 7.07, również używa dwóch WindowAgg 
+- Wersja bez rows between ma najmniejszy koszt
+- We wszystkich wersjach jest tylko jeden Seq Scan tabeli products
+
 
 # Zadanie 6
 
@@ -479,65 +628,74 @@ Do analizy użyj wybranego systemu/bazy danych - wybierz MS SQLserver, Postgres 
 ### Wyniki: 
 
 ```sql
-with order_values as (
-    select
+WITH order_values AS (
+    SELECT
         o.customerid,
         o.orderid,
         o.orderdate,
-        sum(od.unitprice * od.quantity * (1 - od.discount)) + o.freight as order_value,
-        strftime('%Y-%m', o.orderdate) as year_month
-    from orders o
-    join "Order Details" od on o.orderid = od.orderid
-    group by o.customerid, o.orderid, o.orderdate, o.freight
+        SUM(od.unitprice * od.quantity * (1 - COALESCE(od.discount, 0))) 
+            + COALESCE(o.freight, 0) AS order_value,
+        to_char(o.orderdate, 'YYYY-MM') AS year_month
+    FROM orders o
+    JOIN "Order Details" od
+        ON o.orderid = od.orderid
+    GROUP BY
+        o.customerid,
+        o.orderid,
+        o.orderdate,
+        o.freight
 )
+SELECT
+    customerid,
+    orderid,
+    orderdate,
+    order_value,
+    -- MIN 
+    FIRST_VALUE(orderid) OVER (
+        PARTITION BY customerid, year_month
+        ORDER BY order_value ASC
+    ) AS min_order_id,
+    FIRST_VALUE(orderdate) OVER (
+        PARTITION BY customerid, year_month
+        ORDER BY order_value ASC
+    ) AS min_order_date,
+    FIRST_VALUE(order_value) OVER (
+        PARTITION BY customerid, year_month
+        ORDER BY order_value ASC
+    ) AS min_order_value,
+    -- MAX 
+    FIRST_VALUE(orderid) OVER (
+        PARTITION BY customerid, year_month
+        ORDER BY order_value DESC
+    ) AS max_order_id,
+    FIRST_VALUE(orderdate) OVER (
+        PARTITION BY customerid, year_month
+        ORDER BY order_value DESC
+    ) AS max_order_date,
+    FIRST_VALUE(order_value) OVER (
+        PARTITION BY customerid, year_month
+        ORDER BY order_value DESC
+    ) AS max_order_value
+FROM order_values
+ORDER BY customerid, year_month, order_value;
 
-select
-    *,
-
-    -- MIN
-    first_value(orderid) over (
-        partition by year_month
-        order by order_value asc
-    ) as min_order_id,
-
-    first_value(orderdate) over (
-        partition by year_month
-        order by order_value asc
-    ) as min_order_date,
-
-    first_value(order_value) over (
-        partition by year_month
-        order by order_value asc
-    ) as min_order_value,
-
-    -- MAX
-    first_value(orderid) over (
-        partition by year_month
-        order by order_value desc
-    ) as max_order_id,
-
-    first_value(orderdate) over (
-        partition by year_month
-        order by order_value desc
-    ) as max_order_date,
-
-    first_value(order_value) over (
-        partition by year_month
-        order by order_value desc
-    ) as max_order_value
-
-from order_values;
 ```
-![alt text](screen/zdjecie3.png)
-![alt text](screen/zdjecie4.png)
+![1](screen2/9.png)
+![1](screen2/10.png)
 
 <div style="page-break-after: always;"></div>
 
-### Plan zapytania dla SQLite:
-![alt text](screen/zdjecie7.png)
+### Plan zapytania
+![1](screen2/11.png)
+
 ---
 
-Uzycie first value umożliwia wykonanie zadania bez użycia dodatkowych joinów, podzapytań czy agregacji.
+### Wnioski
+
+- Plan ma jeden Seq Scan tabel orders i orderdetails, połączone przez Hash Join 
+- Są dwa WindowAgg: jeden dla wartości MIN (ASC), drugi dla MAX (DESC)
+- Koszt zapytania to 233.71
+
 
 <div style="page-break-after: always;"></div>
 
@@ -560,100 +718,124 @@ Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
 ### Wyniki: 
 
-Kod SQL z funkcją okna dla SQLite:
+Kod SQL z funkcją okna:
 
 ```sql
 with base as (
-    select 
+    select
         id,
         productid,
-        date,
+        [date],
         value * quantity as sales_value
     from product_history
 )
-
-select 
+select TOP 100
     *,
     sum(sales_value) over (
-        partition by productid, strftime('%Y-%m', date)
-        order by date
+        partition by productid, format([date], 'yyyy-MM')
+        order by [date]
     ) as cumulative_sales
 from base;
+
 ```
-Rezultat wywołania powyższego zapytania:
 
-![alt text](screen/zdjecie5.png)
 
-Kod SQL bez funkcji okna dla PostgreSQL:
+
+Kod SQL bez funkcji okna:
 
 ```sql
-SELECT
+select TOP 100
     p1.id,
     p1.productid,
-    p1.date,
-    p1.value * p1.quantity AS sales_value,
-
-    (
-        SELECT SUM(p2.value * p2.quantity)
-        FROM product_history p2
-        WHERE p2.productid = p1.productid
-          AND date_trunc('month', p2.date) = date_trunc('month', p1.date)
-          AND p2.date <= p1.date
-    ) AS cumulative_sales
-
-FROM product_history p1
-ORDER BY p1.productid, p1.date
-LIMIT 100;
+    p1.[date],
+    p1.value * p1.quantity as sales_value,
+    (select sum(p2.value * p2.quantity)
+     from product_history p2
+     where p2.productid = p1.productid
+       and year(p2.[date]) = year(p1.[date])
+       and month(p2.[date]) = month(p1.[date])
+       and p2.[date] <= p1.[date]
+    ) as cumulative_sales
+from product_history p1
 ```
-Rezultat wywołania powyższego zapytania:
-![alt text](screen/zdjecie6.png)
-
-### Czasy zapytań z funkcją okna (bez ograniczenia wierszy):
-- MS SQL Server: 29 s
-- SQLite: 1,7 s
-- PostgreSQL: 7 s
-
-### Czasy zapytań bez funkcji okna:
-- MS SQL Server: 18 s
-- SQLite: 1m 28s
-- PostgreSQL: 2m 9s
 
 
-### Plany dla zapytań z funkcją okna:
-Dla zapytań bez funkcji okna wynik został ograniczony do 100 wierszy, gdyż w przeciwnym razie koszt obliczeniowy byłby zbyt duży, aby uzyskać rozwiązanie w rozsądnym czasie.
 
--SQLite:
-![alt text](screen/zdjecie9.png)
--PostgreSQL:
-![alt text](screen/zdjecie15.png)
--MS SQL Server
-![alt text](screen/zdjecie16.png)
+| Baza danych | Funkcja okna | Bez funkcji okna |
+|-------------|--------------|------------------|
+| MS SQL Server | 44 s | 1 min 57 s |
+| PostgreSQL | 17 s | 2 min 9 s |
+| SQLite | 1,7 s | 1 min 28 s |
 
 
-<div style="page-break-after: always;"></div>
 
-### Plany dla zapytań bez funkcji okna:
--SQLite:
-![alt text](screen/zdjecie8.png)
--PostgreSQL:
-![alt text](screen/zdjecie13.png)
--MS SQL Server:
-![alt text](screen/zdjecie14.png)
+
+
+MS SQL Server 
+
+![1](screen2/19.png)
+
+- zapytanie pierwsze
+
+
+![1](screen2/20.png)
+
+
+- zapytanie drugie 
+
+![1](screen2/21.png)
+![1](screen2/22.png)
+
+
+PostgreSQL
+
+
+![1](screen2/29.png)
+
+- zapytanie pierwsze 
+
+![1](screen2/30.png)
+
+- zapytanie drugie 
+
+
+![1](screen2/37.png)
+
+SQLite
+
+![1](screen2/36.png)
+
+- zapytanie pierwsze 
+
+![1](screen2/38.png)
+
+- zapytanie drugie 
+
+![1](screen2/39.png)
 
 
 ### Wnioski
-- Złożoność obliczeniowa sum narastających:  
- Zadanie wykazuje, że obliczanie wartości narastających za pomocą tradycyjnego SQL jest skrajnie nieoptymalne na dużych zbiorach danych. Bez funkcji okna konieczne było ograniczenie wyników do 100 wierszy, aby zapytanie zakończyło się w rozsądnym czasie.
 
 
-- Przewaga SUM() OVER:  
- Zastosowanie funkcji okna pozwala na uzyskanie wyników dla całego zbioru 2,2 mln wierszy w czasie kilku sekund bez ograniczenia liczby wierszy. Bez funkcji okna czas ten wydłuża się wielokrotnie nawet przy małej próbce danych.
+#### MS SQL Server
+- Zapytanie z funkcją okna ma jeden Clustered Index Scan dla tabeli product_history, Window Aggregate i Sort
+- Zapytanie bez funkcji okna ma dwa Clustered Index Scan
+- Plan zapytania z wersją z funkcją okna jest prostsza
+
+#### PostgreSQL
+- Zapytanie z funkcją okna ma koszt 206268.17, używa jednego Seq Scan, Sort i WindowAgg
+- Zapytanie bez funkcji okna ma koszt 3953802.63 (prawie 20 razy więcej), używa Aggregate i Index Scan 
+- Koszt jest duzo większy w zapytaniu bez funkcji okna 
 
 
-- Czytelność i prostota kodu:
- Funkcje okna pozwalają na sformułowanie zwięzłego i czytelnego zapytania bez konieczności stosowania skomplikowanych JOINów tej samej tabeli ze sobą czy korelacji czasowych w podzapytaniach.
+#### SQLite
+- Zapytanie z funkcją okna używa Full Scan tabeli product_history 
+- Zapytanie bez funkcji okna wykonuje Full Scan tabeli dwa razy
 
-<div style="page-break-after: always;"></div>
+
+
+
+
 
 # Zadanie 8
 

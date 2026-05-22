@@ -144,8 +144,8 @@ Jaka jest różnica? Czego dotyczy warunek w każdym z przypadków? Napisz polec
 
 ![2_2](screen/zad2-2.png)
 
-Różnica: w pierwszym zapytaniu jest średnia wszystkich produktów, ponieważ subquery jest wywoływane niezależnie od klauzuli where i taki sam wynik średniej(dla całości)jest potem doklejany do każdego produktu z id mniejszym od 10.
-W drugim zapytaniu, dzięki użyciu funkcji okna filtr z where jest uwzględniany, przez co liczymy średnią dla produktów o id mniejszym od 10 uwzględniając w oknie tylko produkty o id mniejszym od 10.
+Różnica: w pierwszym zapytaniu średnia liczona jest w podzapytaniu, które nie widzi warunku where productid < 10 z głównego zapytania. Dlatego avg() bierze pod uwagę wszystkie produkty z tabeli products, a potem ta wartość jest doklejana do każdego rekordu spełniającego warunek.
+W drugim zapytaniu występuje funkcja okna. Najpierw działa where, zostają tylko produkty o id < 10 i dopiero z nich liczona jest średnia.
 
 
 ### Podzapytanie równoważne 2
@@ -162,28 +162,20 @@ FROM products p
 WHERE productid < 10;
 ```
 
+![2_2](screen2/1.png)
+
 ### funkcja okna równoważna 1
 
 ```sql
-WITH all_products AS (
-    SELECT *
-    FROM products
-),
-calc AS (
-    SELECT
-        *,
-        AVG(unitprice) OVER () AS avgprice
-    FROM all_products
+WITH calc AS (
+    SELECT *, AVG(unitprice) OVER () AS avgprice
+    FROM products              
 )
-SELECT
-    productid,
-    ProductName,
-    unitprice,
-    avgprice
+SELECT productid, ProductName, unitprice, avgprice
 FROM calc
 WHERE productid < 10;
 ```
-
+![2_2](screen2/2.png)
 
 ---
 
@@ -211,6 +203,8 @@ W DataGrip użyj opcji Explain Plan/Explain Analyze
 
 > Wyniki:
 
+- podzapytanie
+
 ```sql
 select productid, productname, unitprice, 
 (select avg(unitprice) from products) as avgprice
@@ -218,7 +212,7 @@ from products p;
 
 ```
 
-
+- funkcja okna 
 
 ```sql
 
@@ -226,6 +220,8 @@ select productid, productname, unitprice,
 avg(unitprice) over () as avgprice
 from products;
 ```
+
+- join
 
 ```sql
 select p.productid, p.productname, p.unitprice, avg(a.unitprice) as avgprice
@@ -236,43 +232,66 @@ group by p.productid, p.productname, p.unitprice;
 ```
 
 ### Plany zapytań dla MS SQL Server
+
+- podzapytanie 
+
 ![zad5](screen/ssms-plan3.1.png)
 
+- funkcja okna
+
 ![zad5](screen/ssms-plan3.2.png)
+
+- join 
 
 ![zad5](screen/ssms-plan3.3.png)
 
 ### Plany zapytań dla PostgreSQL
+
+- podzapytanie 
+
 ![alt text](screen/postgres3_subquery.png)
 
+- funkcja okna
+
 ![alt text](screen/postgres3_window.png)
+
+- join 
 
 ![alt text](screen/postgres3_cross_join.png)
 
 
 ### Plany zapytań dla SQLite
+
+- podzapytanie 
+
 ![alt text](screen/sqlite3_subquery.png)
 
+- funkcja okna
+
 ![alt text](screen/sqlite3_window.png)
+
+- join 
 
 ![alt text](screen/sqlite3_cross_join.png)
 
 
-# Wnioski
-## MS SQL SERVER
-- W MS SQL Server najważniejszym operatorem w zapytaniach jest Clustered Index Scan dla tabeli products. 
-Różnica sprowadza się głównie do liczby wykonań Full Index Scan: zapytanie z funkcją okna wykonuje go tylko raz (74% kosztu zapytania): średnia i dane główne liczone są w jednym przebiegu. Natomiast podzapytanie i cross join wykonują Index Scan dwa razy (po ~47-48% każdy, łącznie ~95% kosztu zapytania): jeden dla obliczenia AVG, drugi dla głównych danych.
+### Porównanie 
+#### MS SQL SERVER
+- Podzapytanie i join mają podobne plany. Oba wykonują dwa skanowania tabeli products
+- Funkcja okna ma jeden skan tabeli, ale ma więcej operacji 
 
-- W podzapytaniu dwa skany łączone są przez Nested Loops. Wartość średniej przechodzi przez Compute Scalar do każdego wiersza. Cross Join łączy dwa skany przez Nested Loops i dodatkowo stosuje dwie agregacje.
 
-## PostgreSQL
-- W PostgreSQL funkcja okna wykonuje jeden Seq Scan, po którym WindowAgg liczy średnią: total cost wynosi 2.73, a Actual Time 0.051 ms.
-- Podzapytanie ma dwa Seq Scan i Aggregate dla obliczenia średniej: total cost 3.75, Actual Time 0.14 ms. Problem pojawia się przy joinie, żeby policzyć średnią ze wszystkich produktów trzeba użyć cross join, a cross join powoduje, że dla n wierszy mamy n² par do przetworzenia (w Nested Loop widać 5929 wierszy = 77 × 77). Dlatego jest wyższy koszt agregacji niż w pozostałych zapytaniach: total cost 108.45, Actual Time 1.21 ms. 
+#### PostgreSQL
+- Podzapytanie ma koszt 3.75, występują dwa Seq Scan dla tabeli products
+- Funkcja okna ma koszt 2.73, jest tylko jeden Seq Scan i WindowAgg
+- Join ma koszt 108, bo cross join tworzy 5929 wierszy (77 * 77)
+- Najlepszy koszt ma funkcja okna, a najgorszy join
 
-## SQLite
-SQLite nie pokazuje kosztów ani liczby wierszy przetworzonych. W SQLite w każdym z zapytań pojawiają się dwa bloki Full Scan. W podzapytaniu pojawia się osobny blok Subquery, a funkcja okna realizowana jest przez CO-ROUTINE.
-## Podsumowanie
-We wszystkich trzech systemach najbardziej efektywna jest funkcja okna, ponieważ wymaga tylko jednego skanu tabeli. Największe różnice widać w PostgreSQL: cross join tworzy n² wierszy (5929 zamiast 77), więc agregacja robi się droższa.
+
+#### SQLite
+- Wszystkie trzy plany mają Full Scan tabeli products dwa razy
+- Plany wyglądają podobnie 
+
 
 ---
 
@@ -292,16 +311,23 @@ Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
 > Wyniki:
 
+- podzapytanie
+
 ```sql
 select p.productid, p.productname, p.unitprice,
-(
+    (select avg(x.unitprice)
+     from products x
+     where x.categoryid = p.categoryid
+    ) as avg_category_price
+from products p
+where p.unitprice > (
     select avg(x.unitprice)
     from products x
     where x.categoryid = p.categoryid
-) as avg_category_price
-from products p
-where p.unitprice > avg_category_price
+);
 ```
+
+- funkcja okna 
 
 ```sql
 select *
@@ -312,6 +338,8 @@ from (
 ) t
 where t.unitprice > t.avg_category_price;
 ```
+
+- join
 
 ```sql
 select p.productid, p.productname, p.unitprice, avg(x.unitprice) as avg_category_price
@@ -324,37 +352,66 @@ having p.unitprice > avg(x.unitprice);
 ```
 
 ### Plany zapytań dla MS SQL Server
-![zad5](screen/plan-ssms4.1.png)
 
-![zad5](screen/mssql4_window.png)
+- podzapytanie 
 
-![zad5](screen/mssql4_join.png)
+![2_2](screen2/5.png)
+
+- funkcja okna 
+
+![2_2](screen2/4.png)
+
+- join 
+
+![2_2](screen2/3.png)
 
 ### Plany zapytań dla PostgreSQL
+
+- podzapytanie 
+
 ![zad5.1](screen/postgres4_subquery.png)
 
+- funkcja okna 
+
 ![zad5.1](screen/postgres4_window.png)
+
+- join
 
 ![zad5.1](screen/postgres4_join.png)
 
 ### Plany zapytań dla SQLite
 
+- podzapytanie
+
 ![zad5.2](screen/sqlite4_subquery.png)
+
+- funkcja okna 
 
 ![zad5.2](screen/sqlite4_window.png)
 
+- join 
+
 ![zad5.2](screen/sqlite4_join.png)
 
-# Wnioski 
-## MS SQL Server
-W MS SQL Server najważniejszym operatorem jest Clustered Index Scan dla tabeli products. Funkcja okna wykonuje jeden Index Scan, po którym następuje Sort po categoryid (32% kosztu, dominująca operacja w planie), Segment i Stream Aggregate liczące średnią dla kategorii, a na końcu Filter odrzuca wiersze poniżej średniej. Podzapytanie wykonuje dwa skany tabeli (11% i 44% kosztu, razem 55%). Zapytanie z left join łączy produkty z tej samej kategorii przez Nested Loops, oblicza średnią na połączonym zbiorze i dopiero na końcu filtruje wiersze klauzulą HAVING.
+### Wnioski 
+#### MS SQL Server
 
-## PostgreSQL
-W PostgreSQL funkcja okna wykonuje jeden Seq Scan, po którym WindowAgg liczy średnią dla okna: total cost 6.49, Actual Time 0.152 ms. Podzapytanie wymaga osobnego Aggregate dla każdej kategorii i drugiego skanu tabeli : total cost 207.96, Actual Time 0.762 ms, czyli drożej niż funkcja okna. Left join używa Hash Join po categoryid, który wewnątrz każdej kategorii łączy każdy wiersz z każdym (Hash Join zwraca 811 wierszy zamiast 77), dlatego agregacja wykonywana jest na większym zbiorze niż w pozostałych zapytaniach: total cost 19.27, Actual Time 0.208 ms.
+- Podzapytanie ma dwa Clustered Index Scan dla tabeli products
+- Funkcja okna ma jeden Clustered Index Scan i mniej operacji niż podzapytanie
+- Join ma jeden Clustered Index Scan, plan podobny do funkcji okna
 
-## SQlite
-W SQLite funkcja okna ma pojedynczy Full Scan z CO-ROUTINE. Podzapytanie i join wymagają dwóch skanów tabeli products.
-We wszystkich trzech systemach najlepsza jest funkcja okna, bo liczy średnią raz bez ponownego skanowania tabeli. Podzapytanie jest mniej wydajne, bo tabela skanowana jest co najmniej dwa razy i jeszcze jest osobna agregacja. Najgorzej wypada join, który łączy dane przez Nested Loops lub Hash Join, przez co agregat liczony jest na większym zbiorze.
+
+#### PostgreSQL
+- Podzapytanie ma koszt 207.96, występuje Seq Scan tabeli products trzy razy, ma
+  najwyzszy koszt w porównaniu do pozostałych zapytań
+- Funkcja okna ma koszt 6.49, jest jeden Seq Scan, WindowAgg i Sort
+- Join ma koszt 19.27, używa Hash Join
+- Najlepszy koszt ma funkcja okna, a najgorszy podzapytanie
+
+#### SQLite
+- Podzapytanie używa dwa razy Index Scan po categoryid, występuje jeden Full Scan 
+- Funkcja okna ma najwięcej operacji
+- Join ma najprostszy plan: Full Scan of p i Index Scan of x
 
 
 ---
@@ -498,103 +555,117 @@ Przetestuj działanie w różnych SZBD (MS SQL Server, PostgreSql, SQLite)
 
 > Wyniki:
 
+- podzapytanie 
+
 ```sql
 WITH t AS (
-    SELECT 
-        ph.id,
-        ph.productid,
-        ph.productname,
-        ph.categoryid,
-        ph.unitprice,
-        (
-            SELECT AVG(ph2.unitprice)
-            FROM product_history ph2
-            WHERE ph2.categoryid = ph.categoryid
+    SELECT p.id, p.productid, p.productname, p.categoryid, p.unitprice,
+        (SELECT AVG(p2.unitprice)
+         FROM product_history p2
+         WHERE p2.categoryid = p.categoryid
         ) AS avg_category_price
-    FROM product_history ph
+    FROM product_history p
+    WHERE p.id BETWEEN 1 AND 1999
 )
 SELECT *
 FROM t
-WHERE id BETWEEN 1 AND 2000
-  AND unitprice > avg_category_price;
+WHERE unitprice > avg_category_price
+ORDER BY id;
+```
+- join 
+```sql
+WITH t AS (
+    SELECT *
+    FROM product_history
+    WHERE id < 2000
+)
+SELECT p.id, p.productid, p.productname, p.categoryid, p.unitprice,
+    AVG(pp.unitprice) AS avg_price_in_category
+FROM t p
+JOIN t pp ON p.categoryid = pp.categoryid
+GROUP BY p.id, p.productid, p.productname, p.categoryid, p.unitprice
+HAVING p.unitprice > AVG(pp.unitprice)
+ORDER BY p.id;
 ```
 
-```sql
-with t as (
-    select *
-    from product_history
-    where id < 20000
-)
-select
-    p.id,
-    p.productid,
-    p.productname,
-    p.categoryid,
-    p.unitprice,
-    avg(pp.unitprice) as avg_price_in_category
-from t p
-join t pp on p.categoryid = pp.categoryid
-group by
-    p.id, p.productid, p.productname, p.categoryid, p.unitprice
-having p.unitprice > avg(pp.unitprice)
-order by p.id;
-```
+- funkcja okna 
 
 ```sql
-with t as (
-	select *
-	from product_history
-	where id < 100000
+WITH t AS (
+    SELECT *
+    FROM product_history
+    WHERE id < 2000
 )
-select *
-from (
-	select
-		id,
-		productid,
-		productname,
-		categoryid,
-		unitprice,
-		avg(unitprice) over (partition by categoryid) as avg_price_in_category
-	from t
+SELECT *
+FROM (
+    SELECT id, productid, productname, categoryid, unitprice,
+        AVG(unitprice) OVER (PARTITION BY categoryid) AS avg_price_in_category
+    FROM t
 ) x
-where unitprice > avg_price_in_category
-order by id;
+WHERE unitprice > avg_price_in_category
+ORDER BY id;
 ```
 
 
 ### Wyniki zapytań dla MS SQL Server
-![zad5](6.1.2.png)
 
-![zad5](6.2.2.png)
+- podzapytanie 
 
-![zad5](6.3.2.png)
+![2_2](screen2/6.png)
 
+- join 
+
+![2_2](screen2/7.png)
+
+- funkcja okna
+
+![2_2](screen2/8.png)
 
 ### Wyniki zapytań dla PostgreSQL:
+
+- podzapytanie 
+
 ![zad51](screen/postgres6_subquery.png)
 
-![zad51](screen/postgres6_join.png)
+- join 
 
-![zad51](screen/postgres6_window.png)
+![2_2](screen2/9.png)
+
+- funkcja okna
+
+![2_2](screen2/10.png)
 
 ### Wyniki zapytań dla SQLite:
+
+- podzapytanie 
+
 ![zad51](screen/sqlite6_subquery.png)
+
+- join 
 
 ![zad51](screen/sqlite6_join.png)
 
+- funkcja okna
+
 ![zad51](screen/sqlite6_window.png)
 
-Ze względu na długi czas wykonania zapytań ograniczyliśmy liczbę wierszy.
 
-# Wnioski
- - W PostgreSQL funkcja okna na zbiorze: ma total cost 21576 i Actual Time ~570 ms. Podzapytanie  wykonuje dwa Full Scan tabeli (każdy cost 87668) i osobny Aggregate dla każdej kategorii (cost 88388), dlatego total cost rośnie znacznie więcej niż w przypadku z funkcją okna. Natomiast join wypada najgorzej, zwłaszcza w PostgreSQL, gdzie join tworzy bardzo dużo wierszy przed agregacją , końcowy total cost wynosi 1 757 236. 
 
-- W MS SQL Server różnice są mniejsze, bo wykorzystywane są Lazy Spool i Parallelism, ale i tak w planie funkcji okna dominuje Sort (61% kosztu), a w planie z joinem: Clustered Index Scan (88% kosztu)
+### Wnioski 
+#### MS SQL Server
+- Podzapytanie ma Clustered Index Seek i Clustered Index Scan
+- Join ma dwa Clustered Index Seek
+- Funkcja okna ma Clustered Index Seek i Sort, ma najwięcej operacji
 
-- W SQLite join na tak dużej tabeli praktycznie nie wykonuje się bez ograniczenia liczby wierszy.
+#### PostgreSQL
+- Join ma koszt 14875.32, używa Hash Join i Sort
+- Funkcja okna ma koszt 298.4, używa Index Scan, Sort i WindowAgg, ma najlepszy koszt
+- Podzapytanie ma koszt 88388.85, używa Full Scan dwa razy, ma najwyższy koszt
 
-Najlepiej we wszystkich trzech systemach wypada funkcja okna, bo liczy średnią raz z sortowaniem po categoryid.
-
+#### SQLite
+- Podzapytanie wykonuje trzy Full Scan tabeli product_history
+- Join używa Index Scan po categoryid i Full Scan
+- Funkcja okna ma najwięcej operacji
 
 
 
