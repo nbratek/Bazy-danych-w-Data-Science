@@ -679,7 +679,11 @@ select * from product_history
 | 2.  | 25 881 | 0 | 0 | 3 891 / 45 285 ms |
 
 
-Pierwsze wykonanie pokazuje physical reads = 1 i read-ahead reads = 25 892. Drugie wykonanie ma physical reads = 0 i read-ahead reads = 0. Logical reads są identyczne (25 881) niezależnie od tego, czy strony są w pamięci. 
+pierwsze wykonanie zapytania select * from product_history wymagało odczytu danych z dysku. Widać to po wartościach physical reads = 1 oraz read-ahead reads = 25 892. SQL Server przewidział, że będzie potrzebował dużej liczby stron i odczytał je z wyprzedzeniem mechanizmem read-ahead.
+
+Drugie wykonanie tego samego zapytania nie wymagało już odczytu z dysku, ponieważ potrzebne strony znajdowały się w pamięci podręcznej. Dlatego physical reads = 0 oraz read-ahead reads = 0.
+
+W obu wykonaniach liczba logical reads była taka sama i wyniosła 25 881. Wynika to z faktu, że logical reads oznaczają liczbę stron odczytanych z punktu widzenia silnika SQL Server, niezależnie od tego, czy strony zostały pobrane z dysku, czy z pamięci RAM.
 
 
 # Zadanie 2
