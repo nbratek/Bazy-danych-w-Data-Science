@@ -343,13 +343,16 @@ pkt b)
 | b2) `select * where id between 999000 and 10000000` | Table Scan | 25 836 | - | 1797 / 24 848 ms |
 
 
-Indeks nieklastrowy dla zapytań where id = 1000000 z count(*) zredukował logical reads do 3, a z select * do 4. Dla zapytań where id between 999000 and 10000000 z count(*) logical reads spadły do 2 934, ale z select * SQL Server zignorował indeks i wykonał Table Scan (25 836 logical reads).
-Czas wykonania zapytań where id = 1000000 spadł niemal do zera (34 ms / 68 ms). Dla zapytań where id between 999000 and 10000000 z count(*) elapsed time wynosi 224 ms, a z select * 24,8 s.
+## Wnioski
 
+Indeks nieklastrowy na kolumnie id bardzo dobrze sprawdza się dla zapytań selektywnych, szczególnie gdy wyszukiwany jest pojedynczy rekord. W przypadku ```count(*) where id = 1000000``` liczba odczytów logicznych spadła do 3, a dla ```select * where id = 1000000``` do 4. Oznacza to, że SQL Server może szybko odnaleźć odpowiedni wpis w indeksie.
 
-Indeks klastrowy jest lepszy do select *, nieklastrowy do count(*). 
+Dla zapytania zakresowego ```count(*)``` z większym zakresem wartości, indeks nieklastrowy również był korzystny, ponieważ silnik mógł policzyć rekordy bez odczytywania całych wierszy z tabeli. Liczba odczytów logicznych wyniosła 2934.
 
-po zakończeniu pozostaw indeks klastrowy
+Inaczej wygląda sytuacja dla ```select *``` z takim jak wyżej zakresem wartości. W tym przypadku SQL Server zignorował indeks nieklastrowy i wykonał Table Scan, ponieważ zapytanie wymagało pobrania wszystkich kolumn ze sporej liczby wierszy. Korzystanie z indeksu nieklastrowego wymagałoby wielu operacji RID Lookup, co byłoby mniej opłacalne niż jednorazowe przeskanowanie tabeli.
+
+## Końcowy wniosek
+Indeks nieklastrowy jest bardzo dobry dla zapytań typu count(*) oraz dla wyszukiwania pojedynczych rekordów po kolumnie id, ale nie jest optymalny dla select * zwracającego duży zakres danych. Do takich zapytań lepiej nadaje się indeks klastrowy, ponieważ dane są fizycznie uporządkowane według klucza indeksu i można efektywniej odczytywać całe wiersze z dużego zakresu.
 
 
 ### d)
@@ -486,8 +489,14 @@ spróbuj skomentować wyniki tych analiz, dlaczego tak się dzieje
 | 3. `where date >= '2001-01-01' and date <= '2001-12-31'` | Clustered Index Scan + Parallelism | 26 051 | 21,53 | 251 / 452 ms |
 | 4. `where year(date) = 2001` | Clustered Index Scan + Parallelism | 26 051 | 21,19 | 546 / 590 ms |
 
-
-Indeks na date pomógł tylko zapytaniu nr 1, SQL Server wykonał Index Seek + Key Lookup i zredukował logical reads z 26 051 do 7 327. Pozostałe trzy zapytania zignorowały indeks, czas wykonania jest porównywalny do wersji bez indeksu. Pokazuje się Missing Index, który sugeruje indeks z INCLUDE (productid, productname) w zapytaniu 3 z indeksem date. 
+## Wnioski dla I
+Indeks na kolumnie date pomógł tylko w zapytaniu nr 1, ponieważ warunek został zapisany jako bezpośredni zakres na kolumnie:
+`where date >= '2001-01-01' and date <= '2001-01-31'`.
+Dzięki temu SQL Server mógł użyć indeksu do szybkiego wyszukania pasującego zakresu. Plan zmienił się z Clustered Index Scan na Index Seek + Key Lookup, a liczba odczytów logicznych spadła z 26 051 do 7 327.
+## Wnioski dla II i IV
+Zapytania nr 2 i 4 nie skorzystały z indeksu, ponieważ użycie funkcji na kolumnie: `where year(date) = 2001 and month(date) = 1` oraz `where year(date) = 2001` uniemożliwiło efektywne wykorzystanie indeksu. SQL Server musiał przeskanować całą tabelę, co widać po Clustered Index Scan i niezmienionej liczbie odczytów logicznych.
+## Wnioski dla III
+Zapytanie nr 3 również nie skorzystało z indeksu, mimo że warunek był zapisany zakresowo. Wynika to z tego, że zakres obejmuje cały rok, czyli prawdopodobnie zbyt dużą część tabeli. Dodatkowo przy select * samo użycie indeksu na date wymagałoby wielu operacji Key Lookup, aby pobrać pozostałe kolumny. W takiej sytuacji SQL Server uznał, że bardziej opłacalne będzie przeskanowanie indeksu klastrowego. Dodatkowo widoczna jest informacja o Missing Index, który sugeruje indeks z INCLUDE (productid, productname).
 
 
 
@@ -1215,7 +1224,7 @@ where Status = 'Cancelled'
 
 ![png](img/zad_315.png)
 
-Plan zapytania uprościł się. Baza wykonała operację Index Scan na indeksie filtrowanym. Wydaje się to być w tym przypadku optymalne, ponieważ indeks zawiera wyłącznie szukane błędy, więc silnik odczytuje po kolei całą jego zawartość bez konieczności nawigowania po drzewie indeksu jak byloby w przypadku Index Seeka.
+Plan zapytania uprościł się. Baza wykonała operację Index Scan na indeksie filtrowanym. Wydaje się to być w tym przypadku optymalne, ponieważ indeks zawiera wyłącznie szukane anulowane zamówienia, więc silnik odczytuje po kolei całą jego zawartość bez konieczności nawigowania po drzewie indeksu jak byloby w przypadku Index Seeka.
 
 | Zapytanie    | Koszt     | Czas (ms) | Odczytane strony |
 | ------------ | --------- | --------- | ---------------- |
