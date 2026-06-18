@@ -11,7 +11,7 @@
 
 --- 
 
-Celem ćwiczenia jest zapoznanie się ze sposobem przechowywania, przetwarzania i analizy danych przestrzennych w bazach danych
+Celem ćwiczenia jest zapoznanie się ze sposobem przechowywania, przetwarzania i analizy danych przestrzennych w bazach danych
 (na przykładzie systemu Oracle spatial)
 
 Swoje odpowiedzi wpisuj w miejsca oznaczone jako:
@@ -58,8 +58,8 @@ SELECT *
 FROM us_states
 ```
 
-![1](us_states.png)
-![1](us_states_map.png)
+![1](img/us_states.png)
+![1](img/us_states_map.png)
 
 
 US_INTERSTATES
@@ -71,9 +71,9 @@ US_INTERSTATES
 SELECT * 
 FROM US_INTERSTATES
 ```
-![1](US_INTERSTATES.png)
-![1](US_INTERSTATES_map.png)
-![1](INTERSTATES_map2.png)
+![1](img/US_INTERSTATES.png)
+![1](img/US_INTERSTATES_map.png)
+![1](img/INTERSTATES_map2.png)
 
 
 US_CITIES
@@ -87,8 +87,8 @@ FROM US_CITIES
 ```
 
 
-![1](us_cities.png)
-![1](us_cities_map.png)
+![1](img/us_cities.png)
+![1](img/us_cities_map.png)
 
 US_RIVERS
 
@@ -100,8 +100,8 @@ SELECT *
 FROM US_RIVERS
 ```
 
-![1](US_RIVERS.png)
-![1](US_RIVERS_map.png)
+![1](img/US_RIVERS.png)
+![1](img/US_RIVERS_map.png)
 
 
 US_COUNTIES
@@ -113,8 +113,8 @@ US_COUNTIES
 SELECT * 
 FROM US_COUNTIES
 ```
-![1](US_COUNTIES.png)
-![1](US_COUNTIES_map.png)
+![1](img/US_COUNTIES.png)
+![1](img/US_COUNTIES_map.png)
 
 US_PARKS
 
@@ -126,8 +126,8 @@ SELECT *
 FROM US_PARKS
 ```
 
-![1](US_PARKS.png)
-![1](US_PARKS_map.png)
+![1](img/US_PARKS.png)
+![1](img/US_PARKS_map.png)
 
 # Zadanie 2
 
@@ -147,7 +147,7 @@ sdo_ordinate_array ( -117.0, 40.0, -90., 44.0)) g
 FROM dual 
 ```
 
-![1](2.1.png)
+![1](img/2.1.png)
 
 
 Użyj funkcji SDO_FILTER
@@ -163,8 +163,8 @@ sdo_ordinate_array ( -117.0, 40.0, -90., 44.0))
 
 Zwróć uwagę na liczbę zwróconych wierszy (16)
 
-![1](sdo-filter.png)
-![1](2.3.png)
+![1](img/sdo-filter.png)
+![1](img/2.3.png)
 
 
 
@@ -182,8 +182,8 @@ sdo_ordinate_array ( -117.0, 40.0, -90., 44.0))
 ) = 'TRUE';
 ```
 
-![1](sdo-a.png)
-![1](2.4.png)
+![1](img/sdo-a.png)
+![1](img/2.4.png)
 
 
 Porównaj wyniki sdo_filter i sdo_anyinteract
@@ -198,7 +198,7 @@ SDO_ANYINTERACT sprawdza rzeczywiste geometrie i zwraca tylko te, które mają c
 
 Na mapie 2 dodatkowe stany, które są zaznaczone na różowo, są wynikiem SDO_FILTER.
 
-![1](2.5.png)
+![1](img/2.5.png)
 
 # Zadanie 3
 
@@ -213,7 +213,7 @@ WHERE s.state = 'Wyoming'
       AND SDO_INSIDE (p.geom, s.geom ) = 'TRUE';
 ```
 
-![1](SDO_INSIDE.png)
+![1](img/SDO_INSIDE.png)
 
 W przypadku wykorzystywania narzędzia SQL Developer, w celu wizualizacji na mapie użyj podzapytania
 
@@ -227,7 +227,7 @@ WHERE id IN
             AND SDO_INSIDE (p.geom, s.geom ) = 'TRUE'  
 )
 ```
-![1](3.1.png)
+![1](img/3.1.png)
 
 
 
@@ -238,7 +238,7 @@ SELECT state, geom FROM us_states
 WHERE state = 'Wyoming'
 ```
 
-![1](3.2.png)
+![1](img/3.2.png)
 
 
 
@@ -252,7 +252,7 @@ FROM us_parks p, us_states s
 WHERE s.state = 'Wyoming'
 AND SDO_ANYINTERACT (p.geom, s.geom ) = 'TRUE';
 ```
-![1](sdo-anyinteract.png)
+![1](img/sdo-anyinteract.png)
 
 
 W celu wizualizacji użyj podzapytania
@@ -271,7 +271,7 @@ WHERE id IN
 )
 ```
 
-![1](3.3.png)
+![1](img/3.3.png)
 
 
 SDO_INSIDE zwraca tylko te parki, które w całości leżą wewnątrz stanu Wyoming i nie dotykają granicy. Na mapie to żółte parki. Jest ich 32.
@@ -305,7 +305,7 @@ AND SDO_RELATE ( c.geom,s.geom, 'mask=COVEREDBY') = 'TRUE';
 
 W przypadku wykorzystywania narzędzia SQL Developer, w celu wizualizacji danych na mapie należy użyć podzapytania (podobnie jak w poprzednim zadaniu)
 
-![1](4.2.png)
+![1](img/4.2.png)
 
 ```sql
 SELECT cc.county, cc.state_abrv, cc.geom
@@ -319,7 +319,7 @@ WHERE cc.county IN (
 ```
 
 
-![1](4.3.png)
+![1](img/4.3.png)
 
 ```sql
 SELECT cc.county, cc.state_abrv, cc.geom
@@ -331,7 +331,7 @@ WHERE cc.county IN (
     AND SDO_RELATE(c.geom,s.geom,'mask=COVEREDBY') = 'TRUE'
 )
 ```
-![1](4.1.png)
+![1](img/4.1.png)
 
 
 ```sql
@@ -349,10 +349,10 @@ WHERE cc.county IN (
 
 
 
-![1](4.5.png)
+![1](img/4.5.png)
 
 
-![1](4.4.png)
+![1](img/4.4.png)
 
 INSIDE (kolor fioletowy) zwraca 2 jednostki administracyjne. Zwraca tylko te jednostki, które leżą 
 w całości wewnątrz stanu i nie dotykają granicy.
@@ -363,104 +363,263 @@ INSIDE+COVEREDBY (żółty) zwraca 10 jednostek administracyjnych (dotykających
 
 # Zadanie 5
 
-Znajdź wszystkie miasta w odległości 50 mili od drogi (us_interstates) I4
-
-Pokaż wyniki na mapie
-
-```sql
-SELECT * FROM us_interstates
-WHERE interstate = 'I4'
-
-SELECT * FROM us_states
-WHERE state_abrv = 'FL'
-
-SELECT c.city, c.state_abrv, c.location 
-FROM us_cities c
-WHERE ROWID IN 
-( 
-SELECT c.rowid
-FROM us_interstates i, us_cities c 
-WHERE i.interstate = 'I4'
-AND sdo_within_distance (c.location, i.geom,'distance=50 unit=mile') = 'TRUE'
-)
-```
-
-
-
-> Wyniki, zrzut ekranu, komentarz
-
-```sql
---  ...
-```
-
-
-Dodatkowo:
-
-
-a)    Znajdz wszystkie drogi które przecinają rzekę Mississippi
-
-b)    Znajdz wszystkie miasta w odlegości od 15 do 30 mil od drogi 'I275'
-
-c)      Itp. (własne przykłady)
-
-
-> Wyniki, zrzut ekranu, komentarz
-> (dla każdego z podpunktów)
-
-```sql
---  ...
-```
-
-# Zadanie 6
-
-Znajdz 5 miast najbliższych drogi I4
+Znajdź wszystkie miasta w odległości 50 mil od drogi I4 i pokaż wyniki na mapie.
 
 ```sql
 SELECT c.city, c.state_abrv, c.location
-FROM us_interstates i, us_cities c 
+FROM us_cities c
+WHERE c.ROWID IN (
+    SELECT c.ROWID
+    FROM us_interstates i, us_cities c
+    WHERE i.interstate = 'I4'
+    AND SDO_WITHIN_DISTANCE(
+        c.location,
+        i.geom,
+        'distance=50 unit=mile'
+    ) = 'TRUE'
+);
+```
+
+Zapytanie wykorzystuje `SDO_WITHIN_DISTANCE` do wybrania miast oddalonych od geometrii drogi I4 o nie więcej niż 50 mil. Na mapie umieszczono trzy warstwy: granicę Florydy, przebieg drogi I4 oraz znalezione miasta.
+
+![Droga I4 i miasta w odległości do 50 mil](img/5_1.png)
+
+[Mapa interaktywna](html_maps/i4_florida_miasta.html)
+
+## Zadanie 5a
+
+Znajdź wszystkie drogi, które przecinają rzekę Mississippi.
+
+```sql
+SELECT i.interstate, i.geom
+FROM us_interstates i, us_rivers r
+WHERE LOWER(r.name) LIKE '%mississippi%'
+AND SDO_ANYINTERACT(i.geom, r.geom) = 'TRUE';
+```
+
+Funkcja `SDO_ANYINTERACT` zwraca drogi, których geometria ma jakąkolwiek część wspólną z geometrią rzeki Mississippi. Na mapie rzekę oznaczono kolorem niebieskim, a przecinające ją drogi kolorem czerwonym.
+
+![Drogi przecinające rzekę Mississippi](img/5a.png)
+
+[Mapa interaktywna](html_maps/zad5a_drogi_mississippi.html)
+
+## Zadanie 5b
+
+Znajdź wszystkie miasta w odległości od 15 do 30 mil od drogi I275.
+
+```sql
+SELECT c.city, c.state_abrv, c.location
+FROM us_cities c
+WHERE c.ROWID IN (
+    SELECT c.ROWID
+    FROM us_interstates i, us_cities c
+    WHERE i.interstate = 'I275'
+    AND SDO_WITHIN_DISTANCE(
+        c.location,
+        i.geom,
+        'distance=30 unit=mile'
+    ) = 'TRUE'
+)
+AND c.ROWID NOT IN (
+    SELECT c.ROWID
+    FROM us_interstates i, us_cities c
+    WHERE i.interstate = 'I275'
+    AND SDO_WITHIN_DISTANCE(
+        c.location,
+        i.geom,
+        'distance=15 unit=mile'
+    ) = 'TRUE'
+);
+```
+
+Najpierw wybrano miasta położone maksymalnie 30 mil od drogi, a następnie odrzucono miasta znajdujące się nie dalej niż 15 mil. Wynik tworzy pierścień odległościowy 15–30 mil wokół drogi I275.
+
+![Miasta w odległości 15–30 mil od I275](img/5b.png)
+
+[Mapa interaktywna](html_maps/zad5b_miasta_15_30_mil_i275.html)
+
+## Zadanie 5c
+
+Własny przykład: miasta w odległości nie większej niż 50 mil od rzeki Colorado.
+
+```sql
+SELECT
+    c.city,
+    c.state_abrv,
+    c.location
+FROM us_cities c, us_rivers r
+WHERE LOWER(r.name) LIKE '%colorado%'
+AND SDO_GEOM.SDO_DISTANCE(
+    c.location,
+    r.geom,
+    0.005,
+    'unit=mile'
+) <= 50;
+```
+
+Zapytanie zwróciło dwa miasta: **Lakewood (CO)** i **Las Vegas (NV)**.
+
+![Miasta w odległości do 50 mil od rzeki Colorado](img/5c.png)
+
+[Mapa interaktywna](html_maps/zad5c_colorado_river_cities.html)
+
+# Zadanie 6
+
+Znajdź pięć miast położonych najbliżej drogi I4.
+
+```sql
+SELECT
+    c.city,
+    c.state_abrv,
+    SDO_NN_DISTANCE(1) AS distance_mile,
+    c.location
+FROM us_interstates i, us_cities c
 WHERE i.interstate = 'I4'
-AND sdo_nn(c.location, i.geom, 'sdo_num_res=5') = 'TRUE';
+AND SDO_NN(
+    c.location,
+    i.geom,
+    'sdo_num_res=5 unit=mile',
+    1
+) = 'TRUE'
+ORDER BY distance_mile;
 ```
 
->Wyniki, zrzut ekranu, komentarz
+Funkcja `SDO_NN` wyszukuje najbliższe geometrie, a `SDO_NN_DISTANCE` oblicza ich odległość od drogi. Otrzymano:
+
+| Miasto | Stan | Odległość od I4 [mile] |
+| --- | --- | ---: |
+| Orlando | FL | 1,15 |
+| Tampa | FL | 1,93 |
+| St Petersburg | FL | 18,43 |
+| Jacksonville | FL | 88,41 |
+| Fort Lauderdale | FL | 171,39 |
+
+![Pięć miast najbliższych drogi I4](img/6.png)
+
+[Mapa interaktywna](html_maps/zad6_5_miast_najblizszych_i4.html)
+
+## Zadanie 6a
+
+Podaj trzy parki z tabeli `us_parks`, do których jest najbliżej z Nowego Jorku, i oblicz odległości do tych parków.
 
 ```sql
---  ...
+SELECT
+    p.name,
+    SDO_GEOM.SDO_DISTANCE(
+        c.location,
+        p.geom,
+        0.005,
+        'unit=mile'
+    ) AS distance_mile,
+    p.geom
+FROM us_cities c, us_parks p
+WHERE c.city = 'New York'
+AND c.state_abrv = 'NY'
+AND SDO_NN(
+    p.geom,
+    c.location,
+    'sdo_num_res=3',
+    1
+) = 'TRUE'
+ORDER BY distance_mile;
 ```
 
+| Park | Odległość od Nowego Jorku [mile] |
+| --- | ---: |
+| Institute Park | 0,96 |
+| Prospect Park | 1,07 |
+| Thompkins Park | 1,33 |
 
-Dodatkowo:
+![Trzy parki najbliższe Nowemu Jorkowi](img/6a.png)
 
+[Mapa interaktywna](html_maps/zad6a_parki_najblizsze_new_york.html)
 
-a) Podaj 3 parki narodowe do których jest najbliżej z Nowego Jorku, oblicz odległości do tych parków
+## Zadanie 6b
 
-b) Znajdz 5 najbliższych dużych miast (o populacji powyżej 300 tys) od drogi  'I170'
-
-c)  Itp. (własne przykłady). 
-- np. przetestuj działanie funkcji 
-	- sdo_intersection, sdo_union, sdo_difference
-	- sdo_buffer
-	- sdo_centroid, sdo_mbr, sdo_convexhull, sdo_simplify
-
-
-> Wyniki, zrzut ekranu, komentarz
-> (dla każdego z podpunktów)
+Znajdź pięć najbliższych dużych miast o populacji powyżej 300 tys. mieszkańców od drogi I170.
 
 ```sql
---  ...
+SELECT
+    c.city,
+    c.state_abrv,
+    c.pop90,
+    SDO_NN_DISTANCE(1) AS distance_mile,
+    c.location
+FROM us_interstates i, us_cities c
+WHERE i.interstate = 'I170'
+AND c.pop90 > 300000
+AND SDO_NN(
+    c.location,
+    i.geom,
+    'sdo_num_res=5 unit=mile',
+    1
+) = 'TRUE'
+ORDER BY distance_mile;
 ```
 
+Po zastosowaniu warunku `pop90 > 300000` zbiór danych zawiera tylko jedno pasujące miasto: **St Louis (MO)**, populacja 396 685, w odległości około **5,36 mili** od I170. Z tego powodu zapytanie nie mogło zwrócić pięciu rekordów.
+
+![Duże miasta najbliższe drodze I170](img/6b.png)
+
+[Mapa interaktywna](html_maps/zad6b_duze_miasta_i170.html)
+
+## Zadanie 6c
+
+Własny przykład: wyznaczenie minimalnego prostokąta ograniczającego (MBR) dla stanu Texas.
+
+```sql
+SELECT SDO_GEOM.SDO_MBR(s.geom) AS mbr
+FROM us_states s
+WHERE s.state = 'Texas';
+```
+
+Funkcja `SDO_MBR` tworzy najmniejszy prostokąt obejmujący całą geometrię stanu. Na mapie granicę Texasu oznaczono kolorem niebieskim, a jego MBR kolorem czerwonym.
+
+![Minimalny prostokąt ograniczający dla Texasu](img/6c.png)
+
+[Mapa interaktywna](html_maps/zad6c_mbr_texas.html)
 
 # Zadanie 7
 
-Wykonaj kilka własnych przykładów/analiz
+Wykonaj kilka własnych przykładów i analiz.
 
+## Zadanie 7a
 
->Wyniki, zrzut ekranu, komentarz
+Wyznacz stany, przez które przepływa rzeka Missouri.
 
 ```sql
---  ...
+SELECT
+    s.state,
+    s.state_abrv,
+    s.geom
+FROM us_states s, us_rivers r
+WHERE LOWER(r.name) LIKE '%missouri%'
+AND SDO_ANYINTERACT(s.geom, r.geom) = 'TRUE';
 ```
+
+Zapytanie zwróciło osiem stanów: **Montana, Wyoming, Nebraska, South Dakota, North Dakota, Kansas, Iowa i Missouri**. Funkcja `SDO_ANYINTERACT` sprawdza, które geometrie stanów mają część wspólną z geometrią rzeki.
+
+![Stany, przez które przepływa Missouri](img/7a.png)
+
+[Mapa interaktywna](html_maps/zad7a_stany_missouri.html)
+
+## Zadanie 7b
+
+Wyznacz centroidy stanów Florida, Texas i California.
+
+```sql
+SELECT
+    s.state,
+    SDO_GEOM.SDO_CENTROID(s.geom, 0.005) AS centroid
+FROM us_states s
+WHERE s.state IN ('Florida', 'Texas', 'California');
+```
+
+Funkcja `SDO_CENTROID` wyznacza geometryczny środek obszaru. Na mapie pokazano granice trzech stanów oraz położenie ich centroidów.
+
+![Centroidy wybranych stanów](img/7b.png)
+
+[Mapa interaktywna](html_maps/zad7b_centroidy_stanow.html)
 
 Punktacja
 
