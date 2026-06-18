@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_4d9e070343bc58e84a1b0d39851576b6 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    
+                    <style>
+                        .foliumtooltip {
+                            
+                        }
+                       .foliumtooltip table{
+                            margin: auto;
+                        }
+                        .foliumtooltip tr{
+                            text-align: left;
+                        }
+                        .foliumtooltip th{
+                            padding: 2px; padding-right: 8px;
+                        }
+                    </style>
+            
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_4d9e070343bc58e84a1b0d39851576b6" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_4d9e070343bc58e84a1b0d39851576b6 = L.map(
+                "map_4d9e070343bc58e84a1b0d39851576b6",
+                {
+                    center: [41.0, -74.0],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 6,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_e8937e98a4069be6ed7f9f62dfedeed7 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_e8937e98a4069be6ed7f9f62dfedeed7.addTo(map_4d9e070343bc58e84a1b0d39851576b6);
+        
+    
+            var marker_d50eed197ec33824ebd1b6553bb19e86 = L.marker(
+                [40.6698, -73.943849],
+                {
+}
+            ).addTo(map_4d9e070343bc58e84a1b0d39851576b6);
+        
+    
+            var icon_21416c468eba82a52ef9c765ebcfa3f6 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_248257f04be46c102a0c3e46b57502ac = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_8387498f2a2cdf3cfae5456960dda937 = $(`<div id="html_8387498f2a2cdf3cfae5456960dda937" style="width: 100.0%; height: 100.0%;">New York, NY</div>`)[0];
+                popup_248257f04be46c102a0c3e46b57502ac.setContent(html_8387498f2a2cdf3cfae5456960dda937);
+            
+        
+
+        marker_d50eed197ec33824ebd1b6553bb19e86.bindPopup(popup_248257f04be46c102a0c3e46b57502ac)
+        ;
+
+        
+    
+    
+            marker_d50eed197ec33824ebd1b6553bb19e86.bindTooltip(
+                `<div>
+                     New York, NY
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d50eed197ec33824ebd1b6553bb19e86.setIcon(icon_21416c468eba82a52ef9c765ebcfa3f6);
+            
+    
+        function geo_json_80e7c697291699dbb15c1f8bf50ea2ef_styler(feature) {
+            switch(feature.properties.name) {
+                default:
+                    return {"color": "green", "fillColor": "green", "fillOpacity": 0.35, "weight": 2};
+            }
+        }
+
+        function geo_json_80e7c697291699dbb15c1f8bf50ea2ef_onEachFeature(feature, layer) {
+
+            layer.on({
+            });
+        };
+        var geo_json_80e7c697291699dbb15c1f8bf50ea2ef = L.geoJson(null, {
+                onEachFeature: geo_json_80e7c697291699dbb15c1f8bf50ea2ef_onEachFeature,
+            
+                style: geo_json_80e7c697291699dbb15c1f8bf50ea2ef_styler,
+            ...{
+}
+        });
+
+        function geo_json_80e7c697291699dbb15c1f8bf50ea2ef_add (data) {
+            geo_json_80e7c697291699dbb15c1f8bf50ea2ef
+                .addData(data);
+        }
+            geo_json_80e7c697291699dbb15c1f8bf50ea2ef_add({"features": [{"geometry": {"coordinates": [[[-73.967512, 40.672902], [-73.968931, 40.672806], [-73.969011, 40.672527], [-73.962359, 40.663321], [-73.962194, 40.663084], [-73.961746, 40.663103], [-73.960871, 40.663159], [-73.961171, 40.663972], [-73.961293, 40.664408], [-73.961696, 40.666689], [-73.961894, 40.667688], [-73.962092, 40.668683], [-73.962153, 40.668991], [-73.962278, 40.66962], [-73.962662, 40.671557], [-73.965363, 40.672307], [-73.967194, 40.672815], [-73.967512, 40.672902]]], "type": "Polygon"}, "properties": {"distance": 0.96, "name": "Institute Park"}, "type": "Feature"}, {"geometry": {"coordinates": [[[-73.969858, 40.67265], [-73.970291, 40.672611], [-73.970556, 40.672347], [-73.970992, 40.671885], [-73.971458, 40.671374], [-73.971985, 40.670704], [-73.972411, 40.670177], [-73.972945, 40.669517], [-73.973432, 40.668914], [-73.973891, 40.668346], [-73.974348, 40.667781], [-73.974899, 40.667098], [-73.97533, 40.666565], [-73.975883, 40.665882], [-73.976357, 40.665295], [-73.976845, 40.664691], [-73.977337, 40.664083], [-73.977798, 40.663513], [-73.978323, 40.662864], [-73.978797, 40.662277], [-73.979326, 40.661623], [-73.979689, 40.661142], [-73.979625, 40.661032], [-73.979594, 40.660937], [-73.977313, 40.659902], [-73.974975, 40.658817], [-73.973992, 40.657577], [-73.973494, 40.656392], [-73.973303, 40.655612], [-73.973038, 40.654621], [-73.972845, 40.653898], [-73.97249, 40.652572], [-73.972181, 40.651482], [-73.971833, 40.651364], [-73.971185, 40.651107], [-73.965955, 40.653163], [-73.963902, 40.653968], [-73.961716, 40.654825], [-73.961789, 40.655267], [-73.962667, 40.660511], [-73.962984, 40.662403], [-73.962194, 40.663084], [-73.962359, 40.663321], [-73.969011, 40.672527], [-73.969383, 40.672703], [-73.969858, 40.67265]]], "type": "Polygon"}, "properties": {"distance": 1.07, "name": "Prospect Park"}, "type": "Feature"}, {"geometry": {"coordinates": [[[-73.948194, 40.690247], [-73.948042, 40.6895], [-73.947891, 40.68876], [-73.944998, 40.689095], [-73.945136, 40.689791], [-73.945293, 40.690582], [-73.948194, 40.690247]]], "type": "Polygon"}, "properties": {"distance": 1.33, "name": "Thompkins Park"}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+    geo_json_80e7c697291699dbb15c1f8bf50ea2ef.bindTooltip(
+    function(layer){
+    let div = L.DomUtil.create('div');
+    
+    let handleObject = feature => {
+        if (feature === null) {
+            return '';
+        } else if (typeof(feature)=='object') {
+            return JSON.stringify(feature);
+        } else {
+            return feature;
+        }
+    }
+    let fields = ["name", "distance"];
+    let aliases = ["name", "distance"];
+    let table = '<table>' +
+        String(
+        fields.map(
+        (v,i)=>
+        `<tr>
+            <th>${aliases[i]}</th>
+            
+            <td>${handleObject(layer.feature.properties[v])}</td>
+        </tr>`).join(''))
+    +'</table>';
+    div.innerHTML=table;
+    
+    return div
+    }
+    ,{
+  "sticky": true,
+  "className": "foliumtooltip",
+});
+                     
+    
+            geo_json_80e7c697291699dbb15c1f8bf50ea2ef.addTo(map_4d9e070343bc58e84a1b0d39851576b6);
+        
+    
+            var layer_control_7eb8c33300baea32f34a5bb400c5c264_layers = {
+                base_layers : {
+                    "openstreetmap" : tile_layer_e8937e98a4069be6ed7f9f62dfedeed7,
+                },
+                overlays :  {
+                    "3 najbli\u017csze parki od Nowego Jorku" : geo_json_80e7c697291699dbb15c1f8bf50ea2ef,
+                },
+            };
+            let layer_control_7eb8c33300baea32f34a5bb400c5c264 = L.control.layers(
+                layer_control_7eb8c33300baea32f34a5bb400c5c264_layers.base_layers,
+                layer_control_7eb8c33300baea32f34a5bb400c5c264_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": true,
+  "autoZIndex": true,
+}
+            ).addTo(map_4d9e070343bc58e84a1b0d39851576b6);
+
+        
+</script>
+</html>
