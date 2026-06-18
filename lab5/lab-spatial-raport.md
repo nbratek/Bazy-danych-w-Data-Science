@@ -7,7 +7,7 @@
 
 ---
 
-**Imiona i nazwiska:** Natalia Bratek 
+**Imiona i nazwiska:** Natalia Bratek i Jakub Karczewski
 
 --- 
 
